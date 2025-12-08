@@ -2,162 +2,166 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSession, signOut } from "next-auth/react";
 import { Header } from "@/components/common/Header";
-import { PlantCanvas } from "@/components/plant/PlantCanvas";
+import { ThreePlant } from "@/components/plant/ThreePlant";
 import { ContributorTicker } from "@/components/plant/ContributorTicker";
 import { GrowthProgressBar } from "@/components/plant/GrowthProgressBar";
 import { EcoQuestionCard } from "@/components/eco/EcoQuestionCard";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { DailyLimitMessage } from "@/components/common/DailyLimitMessage";
-
-// Mock data for demonstration
-const mockQuestions = [
-  {
-    id: "1",
-    type: "quiz" as const,
-    question: "What is the most effective way to reduce your carbon footprint?",
-    options: [
-      "Using public transportation",
-      "Eating less meat",
-      "Reducing energy consumption at home",
-      "All of the above",
-    ],
-  },
-  {
-    id: "2",
-    type: "pledge" as const,
-    question: "Make a pledge for the environment",
-    placeholder: "I pledge to reduce my plastic usage by...",
-  },
-  {
-    id: "3",
-    type: "quiz" as const,
-    question: "How much water can you save by turning off the tap while brushing teeth?",
-    options: [
-      "Up to 3 liters per day",
-      "Up to 8 liters per day",
-      "Up to 15 liters per day",
-      "Up to 25 liters per day",
-    ],
-  },
-];
-
-const mockContributors = [
-  { id: "1", name: "Maria S.", timestamp: new Date() },
-  { id: "2", name: "Juan D.", timestamp: new Date() },
-  { id: "3", name: "Ana R.", timestamp: new Date() },
-  { id: "4", name: "Carlos M.", timestamp: new Date() },
-  { id: "5", name: "Sofia L.", timestamp: new Date() },
-  { id: "6", name: "Miguel A.", timestamp: new Date() },
-  { id: "7", name: "Isabella G.", timestamp: new Date() },
-  { id: "8", name: "Diego P.", timestamp: new Date() },
-];
+import { useRealtimeContributions, useRealtimePlantStats } from "@/hooks/useRealtime";
 
 type PlantStage = "seed" | "sprout" | "plant" | "tree";
+type Season = "Spring" | "Summer" | "Autumn" | "Winter";
 
-function getPlantStage(contributions: number): PlantStage {
-  if (contributions < 10) return "seed";
-  if (contributions < 50) return "sprout";
-  if (contributions < 200) return "plant";
-  return "tree";
+function getRealSeason(): Season {
+  const month = new Date().getMonth(); // 0-11
+  if (month >= 2 && month <= 4) return "Spring";
+  if (month >= 5 && month <= 7) return "Summer";
+  if (month >= 8 && month <= 10) return "Autumn";
+  return "Winter";
 }
 
 export default function Page() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [userName, setUserName] = useState<string | undefined>();
+  const { data: session, status } = useSession();
+  const { contributions: realtimeContributions, loading: contributionsLoading } = useRealtimeContributions();
+  const { plantStats, loading: statsLoading } = useRealtimePlantStats();
+  
   const [hasContributedToday, setHasContributedToday] = useState(false);
-  const [contributions, setContributions] = useState(75);
   const [showMilestone, setShowMilestone] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [contributors, setContributors] = useState(mockContributors);
-  const [leaves, setLeaves] = useState<
-    Array<{
-      id: string;
-      name: string;
-      x: number;
-      y: number;
-      rotation: number;
-      scale: number;
-      hue: number;
-    }>
-  >([]);
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Generate leaves based on contributions
+  // Time & Season State
+  const [timeOfDay, setTimeOfDay] = useState(12);
+  const [season, setSeason] = useState<Season>("Spring");
+
+  // Initialize Time & Season
   useEffect(() => {
-    const leafCount = Math.min(Math.floor(contributions / 10), 12);
-    const newLeaves = Array.from({ length: leafCount }, (_, i) => ({
-      id: `leaf-${i}`,
-      name: contributors[i % contributors.length]?.name || "",
-      x: 0,
-      y: 0,
-      rotation: (Math.random() - 0.5) * 30,
-      scale: 0.8 + Math.random() * 0.4,
-      hue: 100 + Math.random() * 40,
-    }));
-    setLeaves(newLeaves);
-  }, [contributions, contributors]);
-
-  const handleSignIn = useCallback(() => {
-    setIsLoading(true);
-    // Simulate authentication
-    setTimeout(() => {
-      setIsAuthenticated(true);
-      setUserName("Student");
-      setIsLoading(false);
-    }, 1500);
+    setSeason(getRealSeason());
+    const updateTime = () => {
+      const now = new Date();
+      setTimeOfDay(now.getHours() + now.getMinutes() / 60);
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 60000); // Update every minute
+    return () => clearInterval(interval);
   }, []);
 
-  const handleSignOut = useCallback(() => {
-    setIsAuthenticated(false);
-    setUserName(undefined);
+  // Fetch questions on mount
+  useEffect(() => {
+    async function fetchQuestions() {
+      try {
+        const res = await fetch('/api/questions');
+        const data = await res.json();
+        if (data.questions) {
+          setQuestions(data.questions);
+        }
+      } catch (error) {
+        console.error('Error fetching questions:', error);
+      }
+    }
+    fetchQuestions();
+  }, []);
+
+  // Check if user contributed today
+  useEffect(() => {
+    if (session?.user?.email && realtimeContributions.length > 0) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const userContributionToday = realtimeContributions.some((contrib: any) => {
+        const contribDate = new Date(contrib.created_at);
+        contribDate.setHours(0, 0, 0, 0);
+        return contrib.users?.email === session.user.email && 
+               contribDate.getTime() === today.getTime();
+      });
+      
+      setHasContributedToday(userContributionToday);
+    }
+  }, [session, realtimeContributions]);
+
+  const handleSignOut = useCallback(async () => {
+    await signOut({ callbackUrl: "/" });
   }, []);
 
   const handleSubmitAnswer = useCallback(async (answer: string) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (isSubmitting || !questions[currentQuestionIndex]) return;
+    
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/contributions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question_id: questions[currentQuestionIndex].id,
+          answer,
+        }),
+      });
 
-    const newContributions = contributions + 1;
-    const milestones = [50, 100, 150, 200];
-    const hitMilestone = milestones.some(
-      (m) => contributions < m && newContributions >= m
-    );
+      const data = await res.json();
 
-    if (hitMilestone) {
-      setShowMilestone(true);
-      setTimeout(() => setShowMilestone(false), 2500);
+      if (res.status === 429) {
+        setHasContributedToday(true);
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to submit');
+      }
+
+      // Check for milestone
+      const oldContributions = plantStats?.total_contributions || 0;
+      const newContributions = data.plantStats?.total_contributions || 0;
+      const milestones = [10, 50, 100, 200, 500, 1000];
+      const hitMilestone = milestones.some(
+        (m) => oldContributions < m && newContributions >= m
+      );
+
+      if (hitMilestone) {
+        setShowMilestone(true);
+        setTimeout(() => setShowMilestone(false), 2500);
+      }
+
+      // Move to next question
+      setCurrentQuestionIndex((prev) => (prev + 1) % questions.length);
+      setHasContributedToday(true);
+    } catch (error) {
+      console.error('Error submitting answer:', error);
+    } finally {
+      setIsSubmitting(false);
     }
+  }, [currentQuestionIndex, questions, plantStats, isSubmitting]);
 
-    setContributions(newContributions);
-
-    // Add new contributor
-    const newContributor = {
-      id: `contrib-${Date.now()}`,
-      name: userName || "Anonymous",
-      timestamp: new Date(),
-    };
-    setContributors((prev) => [newContributor, ...prev.slice(0, 19)]);
-
-    // Move to next question
-    setCurrentQuestionIndex((prev) => (prev + 1) % mockQuestions.length);
-
-    // Mark as contributed today (for demo, we'll skip this)
-    // setHasContributedToday(true);
-  }, [contributions, userName]);
-
-  const currentQuestion = mockQuestions[currentQuestionIndex];
-  const plantStage = getPlantStage(contributions);
-  const maxContributions = 250;
-  const milestones = [50, 100, 150, 200];
+  const currentQuestion = questions[currentQuestionIndex];
+  const contributions = plantStats?.total_contributions || 0;
+  const plantStage = plantStats?.current_stage || "seed";
+  const maxContributions = 1000;
+  const milestones = [10, 50, 100, 200, 500];
 
   // Calculate next available time (tomorrow at midnight)
   const nextAvailableTime = new Date();
   nextAvailableTime.setDate(nextAvailableTime.getDate() + 1);
   nextAvailableTime.setHours(0, 0, 0, 0);
 
+  // Format contributors for display
+  const formattedContributors = realtimeContributions.map((contrib: any) => ({
+    id: contrib.id,
+    name: contrib.users?.name || "Anonymous",
+    timestamp: new Date(contrib.created_at),
+  }));
+
+  const isAuthenticated = status === "authenticated";
+  const isLoading = status === "loading" || statsLoading || contributionsLoading;
+
   return (
     <div className="min-h-screen flex flex-col">
-      <Header userName={userName} onSignOut={isAuthenticated ? handleSignOut : undefined} />
+      <Header 
+        userName={session?.user?.name || undefined} 
+        onSignOut={isAuthenticated ? handleSignOut : undefined} 
+      />
 
       <main className="flex-1 flex flex-col">
         {/* Plant Canvas Section */}
@@ -165,13 +169,14 @@ export default function Page() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6 }}
-          className="relative flex-shrink-0"
+          className="relative flex-shrink-0 h-[500px] w-full"
         >
-          <PlantCanvas
-            growthLevel={contributions}
-            leaves={leaves}
-            stage={plantStage}
-            showMilestone={showMilestone}
+          <ThreePlant
+            contributions={contributions}
+            contributors={formattedContributors}
+            stage={plantStage as PlantStage}
+            timeOfDay={timeOfDay}
+            season={season}
           />
 
           {/* Stage indicator */}
@@ -198,12 +203,23 @@ export default function Page() {
         </section>
 
         {/* Contributor Ticker */}
-        <ContributorTicker contributors={contributors} />
+        <ContributorTicker contributors={formattedContributors} />
 
         {/* Main Content Area */}
         <section className="flex-1 flex items-center justify-center px-4 py-8 md:py-12">
           <AnimatePresence mode="wait">
-            {!isAuthenticated ? (
+            {isLoading ? (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-center"
+              >
+                <div className="w-12 h-12 border-4 border-[#81C784] border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="mt-4 text-muted-foreground">Loading...</p>
+              </motion.div>
+            ) : !isAuthenticated ? (
               <motion.div
                 key="auth"
                 initial={{ opacity: 0, y: 20 }}
@@ -225,7 +241,7 @@ export default function Page() {
                   </p>
                 </motion.div>
 
-                <GoogleAuthButton onSignIn={handleSignIn} isLoading={isLoading} />
+                <GoogleAuthButton />
               </motion.div>
             ) : hasContributedToday ? (
               <motion.div
@@ -236,7 +252,7 @@ export default function Page() {
               >
                 <DailyLimitMessage nextAvailableTime={nextAvailableTime} />
               </motion.div>
-            ) : (
+            ) : currentQuestion ? (
               <motion.div
                 key="question"
                 initial={{ opacity: 0, y: 20 }}
@@ -248,6 +264,15 @@ export default function Page() {
                   question={currentQuestion}
                   onSubmit={handleSubmitAnswer}
                 />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="no-questions"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center"
+              >
+                <p className="text-muted-foreground">No questions available</p>
               </motion.div>
             )}
           </AnimatePresence>

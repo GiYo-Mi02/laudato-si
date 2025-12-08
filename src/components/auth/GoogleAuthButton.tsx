@@ -2,13 +2,22 @@
 
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { signIn } from "next-auth/react";
+import { useState } from "react";
 
-interface GoogleAuthButtonProps {
-  onSignIn: () => void;
-  isLoading?: boolean;
-}
+export function GoogleAuthButton() {
+  const [isLoading, setIsLoading] = useState(false);
 
-export function GoogleAuthButton({ onSignIn, isLoading }: GoogleAuthButtonProps) {
+  const handleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await signIn("google", { callbackUrl: "/" });
+    } catch (error) {
+      console.error("Sign in error:", error);
+      setIsLoading(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -21,7 +30,7 @@ export function GoogleAuthButton({ onSignIn, isLoading }: GoogleAuthButtonProps)
         transition={{ type: "spring", stiffness: 400, damping: 17 }}
       >
         <Button
-          onClick={onSignIn}
+          onClick={handleSignIn}
           disabled={isLoading}
           className="w-full h-14 bg-white hover:bg-gray-50 text-[#2C2C2C] font-body text-base rounded-xl shadow-lg border-2 border-[#D4A574]/30 transition-all flex items-center justify-center gap-3"
         >
