@@ -209,7 +209,7 @@ export default function DisplayPage() {
             >
                <h3 className="font-display text-xl text-[#4A6B5C] mb-4">Join the Movement</h3>
                <div className="bg-white p-4 rounded-xl shadow-inner">
-                 <QRCode value="https://laudato-si-webapp.vercel.app/scan" size={180} />
+                 <QRCode value="https://laudato-si.vercel.app/scan" size={180} />
                </div>
                <p className={`mt-3 text-sm font-mono ${mutedTextColor}`}>Scan to participate</p>
             </motion.div>
