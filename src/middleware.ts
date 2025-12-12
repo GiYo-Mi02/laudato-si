@@ -1,30 +1,39 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
+/**
+ * ============================================================================
+ * MIDDLEWARE - Authentication Only (No Email Domain Restriction)
+ * ============================================================================
+ * All authenticated users can access protected routes.
+ * Non-UMak users have a 1-time pledge limit enforced at the API level.
+ * Admins have full access regardless of email domain.
+ * ============================================================================
+ */
 export default withAuth(
   function middleware(req) {
-    const token = req.nextauth.token;
-    
-    // Check if user email is from umak.edu.ph domain
-    if (token?.email && !token.email.endsWith("@umak.edu.ph")) {
-      return NextResponse.redirect(new URL("/unauthorized", req.url));
-    }
-    
+    // All authenticated users can proceed - no email domain restriction
     return NextResponse.next();
   },
   {
     callbacks: {
       authorized: ({ token }) => {
-        // Allow access if authenticated with umak email
-        if (token?.email && token.email.endsWith("@umak.edu.ph")) {
-          return true;
-        }
-        return false;
+        // Allow access if user is authenticated (has token)
+        return !!token;
       },
     },
   }
 );
 
 export const config = {
-  matcher: ["/api/contributions/:path*"],
+  // Protect dashboard routes and API routes
+  matcher: [
+    "/home/:path*",
+    "/rewards/:path*",
+    "/wallet/:path*",
+    "/ranks/:path*",
+    "/profile/:path*",
+    "/pledge/:path*",
+    "/api/contributions/:path*",
+  ],
 };

@@ -57,7 +57,8 @@ export function GoogleAuthButton() {
       </motion.div>
       
       <p className="text-center text-sm text-muted-foreground mt-4 font-body">
-        Only <span className="font-mono text-[#4A6B5C]">@umak.edu.ph</span> accounts are allowed
+        <span className="font-mono text-[#4A6B5C]">@umak.edu.ph</span> users get full access.
+        <br />Guests can make one pledge.
       </p>
     </motion.div>
   );

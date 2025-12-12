@@ -1,8 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 
+/**
+ * Helper function to check if email is UMak domain
+ */
+function isUMakEmail(email: string): boolean {
+  return email.toLowerCase().endsWith('@umak.edu.ph');
+}
+
+/**
+ * POST /api/contributions
+ * Submit a daily pledge/quiz answer.
+ * 
+ * RULES:
+ * - UMak users (@umak.edu.ph): Can pledge once per day, earn points with streak system
+ * - Admins: Full access, earn points like UMak users
+ * - Guest users (non-UMak): Can only pledge ONCE EVER (1-time access)
+ * 
+ * Points: Day 1=1pt up to Day 5+=5pt cap based on streak.
+ */
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -10,43 +28,73 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const userEmail = session.user.email;
     const body = await request.json();
     const { question_id, answer } = body;
 
-    // Get user ID
+    // Get user data including current points and role
     const { data: userData } = await supabase
       .from('users')
-      .select('id, last_contribution')
-      .eq('email', session.user.email)
+      .select('id, last_contribution, total_points, role')
+      .eq('email', userEmail)
       .single();
 
     if (!userData) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check if user already contributed today
     const now = new Date();
-    const lastContribution = userData.last_contribution
-      ? new Date(userData.last_contribution)
-      : null;
-    
-    if (lastContribution) {
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const lastContribDate = new Date(
-        lastContribution.getFullYear(),
-        lastContribution.getMonth(),
-        lastContribution.getDate()
-      );
-      
-      if (today.getTime() === lastContribDate.getTime()) {
+    const isUMakUser = isUMakEmail(userEmail);
+    const isAdmin = userData.role === 'admin';
+    const isGuestUser = !isUMakUser && !isAdmin;
+
+    // =========================================================================
+    // GUEST USER RESTRICTION: Non-UMak users can only pledge ONCE EVER
+    // =========================================================================
+    if (isGuestUser) {
+      // Check if guest has EVER made a contribution (not just today)
+      const { count: existingContributions } = await supabase
+        .from('contributions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userData.id);
+
+      if (existingContributions && existingContributions > 0) {
         return NextResponse.json(
-          { error: 'Already contributed today' },
-          { status: 429 }
+          { 
+            error: 'Guest users can only pledge once. Sign in with a @umak.edu.ph email for full access.',
+            code: 'GUEST_LIMIT_REACHED'
+          },
+          { status: 403 }
         );
       }
     }
 
-    // Get question to check answer
+    // =========================================================================
+    // DAILY RATE LIMIT: UMak users and admins can pledge once per day
+    // =========================================================================
+    if (!isGuestUser) {
+      const lastContribution = userData.last_contribution
+        ? new Date(userData.last_contribution)
+        : null;
+      
+      if (lastContribution) {
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const lastContribDate = new Date(
+          lastContribution.getFullYear(),
+          lastContribution.getMonth(),
+          lastContribution.getDate()
+        );
+        
+        if (today.getTime() === lastContribDate.getTime()) {
+          return NextResponse.json(
+            { error: 'Already contributed today' },
+            { status: 429 }
+          );
+        }
+      }
+    }
+
+    // Get question to validate answer
     const { data: questionData } = await supabase
       .from('questions')
       .select('*')
@@ -58,7 +106,7 @@ export async function POST(request: NextRequest) {
         ? answer === questionData.correct_answer
         : null;
 
-    // Insert contribution
+    // Insert contribution record
     const { data: contribution, error: insertError } = await supabase
       .from('contributions')
       .insert({
@@ -72,11 +120,105 @@ export async function POST(request: NextRequest) {
 
     if (insertError) throw insertError;
 
-    // Update user's last contribution time
-    await supabase
-      .from('users')
-      .update({ last_contribution: now.toISOString() })
-      .eq('id', userData.id);
+    // =========================================================================
+    // POINTS & STREAK SYSTEM
+    // Award points based on streak multiplier (Day 1=1pt, Day 5+=5pt cap)
+    // UMak users and Admins earn points; Guest users don't earn points
+    // =========================================================================
+    
+    let pointsAwarded = 0;
+    let currentStreak = 1;
+
+    // Award points to UMak users and admins (not guests)
+    const canEarnPoints = isUMakUser || isAdmin;
+    
+    if (canEarnPoints) {
+      // Get or create streak record
+      const { data: streakData } = await supabase
+        .from('streaks')
+        .select('*')
+        .eq('user_id', userData.id)
+        .single();
+
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+
+      if (streakData) {
+        const lastPledge = streakData.last_pledge_date 
+          ? new Date(streakData.last_pledge_date) 
+          : null;
+
+        if (lastPledge) {
+          lastPledge.setHours(0, 0, 0, 0);
+          
+          // Check if yesterday - continue streak
+          if (lastPledge.getTime() === yesterday.getTime()) {
+            currentStreak = Math.min(streakData.current_streak + 1, 5);
+          } else if (lastPledge.getTime() < yesterday.getTime()) {
+            // Streak broken - reset to day 1
+            currentStreak = 1;
+          } else {
+            // Same day - shouldn't happen due to rate limit, but handle it
+            currentStreak = streakData.current_streak;
+          }
+        }
+
+        // Update streak record
+        await supabase
+          .from('streaks')
+          .update({
+            current_streak: currentStreak,
+            longest_streak: Math.max(streakData.longest_streak, currentStreak),
+            last_pledge_date: todayStart.toISOString().split('T')[0],
+            updated_at: now.toISOString(),
+          })
+          .eq('user_id', userData.id);
+      } else {
+        // First-time pledge - create streak record
+        await supabase
+          .from('streaks')
+          .insert({
+            user_id: userData.id,
+            current_streak: 1,
+            longest_streak: 1,
+            last_pledge_date: todayStart.toISOString().split('T')[0],
+            streak_started_at: now.toISOString(),
+          });
+      }
+
+      // Calculate points: Day 1=1pt, Day 2=2pt... Day 5+=5pt (capped)
+      pointsAwarded = Math.min(currentStreak, 5);
+
+      // Record point transaction for audit trail
+      await supabase
+        .from('point_transactions')
+        .insert({
+          user_id: userData.id,
+          amount: pointsAwarded,
+          transaction_type: 'pledge_reward',
+          reference_id: contribution.id,
+          description: `Daily pledge - Day ${currentStreak} streak (+${pointsAwarded} pts)`,
+        });
+
+      // Update user's total points
+      await supabase
+        .from('users')
+        .update({ 
+          total_points: (userData.total_points || 0) + pointsAwarded,
+          last_contribution: now.toISOString() 
+        })
+        .eq('id', userData.id);
+    } else {
+      // Guest users - just update last contribution, no points (1-time only)
+      await supabase
+        .from('users')
+        .update({ last_contribution: now.toISOString() })
+        .eq('id', userData.id);
+    }
 
     // Get updated plant stats
     const { data: plantStats } = await supabase
@@ -89,6 +231,10 @@ export async function POST(request: NextRequest) {
         contribution,
         plantStats,
         isCorrect,
+        // Include points info in response for immediate UI feedback
+        pointsAwarded,
+        currentStreak,
+        isGuest: isGuestUser,
       },
       { status: 201 }
     );
@@ -101,6 +247,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * GET /api/contributions
+ * Fetch recent contributions with user info for public display.
+ */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
