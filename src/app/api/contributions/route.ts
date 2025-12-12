@@ -30,7 +30,17 @@ export async function POST(request: NextRequest) {
 
     const userEmail = session.user.email;
     const body = await request.json();
-    const { question_id, answer } = body;
+    const { 
+      question_id, 
+      answer, 
+      pledge_message,
+      answers, // For question answers from pledge flow
+      question_points,
+      is_first_pledge 
+    } = body;
+
+    // Determine if this is a pledge submission or quiz submission
+    const isPledge = !!pledge_message;
 
     // Get user data including current points and role
     const { data: userData } = await supabase
@@ -52,13 +62,18 @@ export async function POST(request: NextRequest) {
     // GUEST USER RESTRICTION: Non-UMak users can only pledge ONCE EVER
     // =========================================================================
     if (isGuestUser) {
-      // Check if guest has EVER made a contribution (not just today)
+      // Check if guest has EVER made a contribution (check both contributions and pledge_messages)
       const { count: existingContributions } = await supabase
         .from('contributions')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userData.id);
 
-      if (existingContributions && existingContributions > 0) {
+      const { count: existingPledges } = await supabase
+        .from('pledge_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userData.id);
+
+      if ((existingContributions && existingContributions > 0) || (existingPledges && existingPledges > 0)) {
         return NextResponse.json(
           { 
             error: 'Guest users can only pledge once. Sign in with a @umak.edu.ph email for full access.',
@@ -94,31 +109,69 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get question to validate answer
-    const { data: questionData } = await supabase
-      .from('questions')
-      .select('*')
-      .eq('id', question_id)
-      .single();
+    let contribution = null;
+    let pledgeMessageRecord = null;
+    let isCorrect = null;
 
-    const isCorrect =
-      questionData?.type === 'quiz'
-        ? answer === questionData.correct_answer
-        : null;
+    // Handle pledge message submission
+    if (isPledge) {
+      // Insert pledge message
+      const { data: pledgeData, error: pledgeError } = await supabase
+        .from('pledge_messages')
+        .insert({
+          user_id: userData.id,
+          message: pledge_message,
+          points_earned: 0, // Will be updated after points calculation
+          is_displayed: false,
+        })
+        .select()
+        .single();
 
-    // Insert contribution record
-    const { data: contribution, error: insertError } = await supabase
-      .from('contributions')
-      .insert({
-        user_id: userData.id,
-        question_id,
-        answer,
-        is_correct: isCorrect,
-      })
-      .select()
-      .single();
+      if (pledgeError) throw pledgeError;
+      pledgeMessageRecord = pledgeData;
 
-    if (insertError) throw insertError;
+      // If there are question answers, store them too
+      if (answers && Object.keys(answers).length > 0) {
+        // Store answers in contributions table for record-keeping
+        for (const [qid, ans] of Object.entries(answers)) {
+          await supabase
+            .from('contributions')
+            .insert({
+              user_id: userData.id,
+              question_id: qid,
+              answer: ans as string,
+              is_correct: null, // We don't validate these for now
+            });
+        }
+      }
+    } else {
+      // Handle quiz/question submission (original flow)
+      const { data: questionData } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('id', question_id)
+        .single();
+
+      isCorrect =
+        questionData?.type === 'quiz'
+          ? answer === questionData.correct_answer
+          : null;
+
+      // Insert contribution record
+      const { data: contributionData, error: insertError } = await supabase
+        .from('contributions')
+        .insert({
+          user_id: userData.id,
+          question_id,
+          answer,
+          is_correct: isCorrect,
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+      contribution = contributionData;
+    }
 
     // =========================================================================
     // POINTS & STREAK SYSTEM
@@ -194,15 +247,27 @@ export async function POST(request: NextRequest) {
       pointsAwarded = Math.min(currentStreak, 5);
 
       // Record point transaction for audit trail
+      const referenceId = isPledge 
+        ? pledgeMessageRecord?.id 
+        : contribution?.id;
+
       await supabase
         .from('point_transactions')
         .insert({
           user_id: userData.id,
           amount: pointsAwarded,
           transaction_type: 'pledge_reward',
-          reference_id: contribution.id,
+          reference_id: referenceId,
           description: `Daily pledge - Day ${currentStreak} streak (+${pointsAwarded} pts)`,
         });
+
+      // Update pledge message with points earned
+      if (isPledge && pledgeMessageRecord) {
+        await supabase
+          .from('pledge_messages')
+          .update({ points_earned: pointsAwarded })
+          .eq('id', pledgeMessageRecord.id);
+      }
 
       // Update user's total points
       await supabase
@@ -229,12 +294,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         contribution,
+        pledge_message: pledgeMessageRecord,
         plantStats,
         isCorrect,
         // Include points info in response for immediate UI feedback
-        pointsAwarded,
-        currentStreak,
+        points_awarded: pointsAwarded,
+        current_streak: currentStreak,
         isGuest: isGuestUser,
+        success: true,
       },
       { status: 201 }
     );
