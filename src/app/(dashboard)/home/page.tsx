@@ -135,7 +135,13 @@ export default function HomePage() {
           guest_has_pledged: false,
           role: isGuest ? 'guest' : 'user',
         });
-        setShowWelcome(true);
+        
+        // Only show welcome modal if user hasn't seen it before (tracked in localStorage)
+        const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
+        if (!hasSeenWelcome) {
+          setShowWelcome(true);
+        }
+        
         setLoading(false);
         return;
       }
@@ -201,8 +207,12 @@ export default function HomePage() {
       });
 
       // Show welcome modal for new users who haven't completed onboarding
+      // Only if they haven't seen it before (tracked in localStorage)
       if (!userData.has_completed_onboarding) {
-        setShowWelcome(true);
+        const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
+        if (!hasSeenWelcome) {
+          setShowWelcome(true);
+        }
       }
 
     } catch (error) {
@@ -232,9 +242,20 @@ export default function HomePage() {
   };
 
   /**
+   * Handle welcome modal close
+   */
+  const handleWelcomeClose = () => {
+    // Mark as seen in localStorage so it doesn't show again
+    localStorage.setItem('hasSeenWelcome', 'true');
+    setShowWelcome(false);
+  };
+
+  /**
    * Handle welcome modal start pledge
    */
   const handleWelcomeStartPledge = () => {
+    // Mark as seen in localStorage
+    localStorage.setItem('hasSeenWelcome', 'true');
     setShowWelcome(false);
     router.push('/pledge?new=true');
   };
@@ -287,7 +308,7 @@ export default function HomePage() {
       {/* Welcome Modal for New Users */}
       <WelcomeModal
         isOpen={showWelcome}
-        onClose={() => setShowWelcome(false)}
+        onClose={handleWelcomeClose}
         onStartPledge={handleWelcomeStartPledge}
         userName={session?.user?.name || undefined}
       />
