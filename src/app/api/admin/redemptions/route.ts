@@ -51,20 +51,20 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit;
 
     let query = supabase
-      .from('reward_redemptions')
+      .from('redemptions')
       .select(`
         *,
-        user:users!reward_redemptions_user_id_fkey (
+        user:users (
           id,
           name,
           email,
           avatar_url
         ),
-        reward:rewards!reward_redemptions_reward_id_fkey (
+        reward:rewards (
           id,
           name,
           category,
-          point_cost
+          cost
         )
       `, { count: 'exact' });
 
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
 
     // Find the redemption
     let query = supabase
-      .from('reward_redemptions')
+      .from('redemptions')
       .select(`
         *,
         users (
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
       `);
 
     if (qr_code) {
-      query = query.eq('qr_code', qr_code);
+      query = query.eq('redemption_code', qr_code);
     } else {
       query = query.eq('id', redemption_id);
     }
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
     if (redemption.expires_at && new Date(redemption.expires_at) < new Date()) {
       // Update status to expired
       await supabase
-        .from('reward_redemptions')
+        .from('redemptions')
         .update({ status: 'expired' })
         .eq('id', redemption.id);
 
@@ -216,11 +216,10 @@ export async function POST(request: NextRequest) {
 
     // Verify the redemption
     const { error: updateError } = await supabase
-      .from('reward_redemptions')
+      .from('redemptions')
       .update({
         status: 'verified',
         verified_at: new Date().toISOString(),
-        verified_by: adminCheck.user.id,
       })
       .eq('id', redemption.id);
 
@@ -229,7 +228,7 @@ export async function POST(request: NextRequest) {
     await logAdminAction(
       adminCheck.user.id,
       'redemption_verified',
-      'reward_redemptions',
+      'redemptions',
       redemption.id,
       { status: 'pending' },
       { status: 'verified' }
@@ -291,10 +290,10 @@ export async function DELETE(request: NextRequest) {
 
     // Get the redemption
     const { data: redemption, error: findError } = await supabase
-      .from('reward_redemptions')
+      .from('redemptions')
       .select(`
         *,
-        reward:rewards!reward_redemptions_reward_id_fkey (point_cost)
+        reward:rewards (cost)
       `)
       .eq('id', id)
       .single();
@@ -314,7 +313,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Refund points to user (use points_spent from redemption record)
-    const pointsToRefund = redemption.points_spent || redemption.reward?.point_cost || 0;
+    const pointsToRefund = redemption.points_spent || redemption.reward?.cost || 0;
     
     await supabase
       .from('users')
@@ -344,14 +343,14 @@ export async function DELETE(request: NextRequest) {
     if (redemption.reward_id) {
       const { data: rewardData } = await supabase
         .from('rewards')
-        .select('stock_quantity')
+        .select('remaining_quantity')
         .eq('id', redemption.reward_id)
         .single();
 
-      if (rewardData && rewardData.stock_quantity !== null) {
+      if (rewardData && rewardData.remaining_quantity !== null) {
         await supabase
           .from('rewards')
-          .update({ stock_quantity: rewardData.stock_quantity + 1 })
+          .update({ remaining_quantity: rewardData.remaining_quantity + 1 })
           .eq('id', redemption.reward_id);
       }
     }
@@ -369,14 +368,14 @@ export async function DELETE(request: NextRequest) {
 
     // Update redemption status
     await supabase
-      .from('reward_redemptions')
+      .from('redemptions')
       .update({ status: 'cancelled' })
       .eq('id', id);
 
     await logAdminAction(
       adminCheck.user.id,
       'redemption_cancelled',
-      'reward_redemptions',
+      'redemptions',
       id,
       { status: 'pending' },
       { status: 'cancelled', points_refunded: pointsToRefund }

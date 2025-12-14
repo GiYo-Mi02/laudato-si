@@ -57,21 +57,18 @@ export async function PUT(request: Request, { params }: RouteParams) {
       is_active,
     } = body;
     
-    // Build update object (only include provided fields)
+    // Build update object using correct database column names
     const updates: Record<string, any> = {};
     if (title !== undefined) {
-      updates.title = title.trim();
-      updates.name = title.trim();
+      updates.name = title.trim();  // Database uses 'name', not 'title'
     }
     if (description !== undefined) updates.description = description?.trim() || null;
     if (goal_amount !== undefined) {
-      updates.goal_amount = goal_amount;
-      updates.goal_points = goal_amount;
+      updates.goal_points = goal_amount;  // Database uses 'goal_points', not 'goal_amount'
     }
     if (image_url !== undefined) updates.image_url = image_url?.trim() || null;
     if (end_date !== undefined) {
-      updates.end_date = end_date || null;
-      updates.ends_at = end_date || null;
+      updates.ends_at = end_date || null;  // Database uses 'ends_at', not 'end_date'
     }
     if (is_active !== undefined) updates.is_active = is_active;
     

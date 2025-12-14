@@ -51,7 +51,6 @@ export async function GET(request: Request, { params }: RouteParams) {
       .from("point_donations")
       .select(`
         id,
-        point_amount,
         points_donated,
         message,
         created_at,
@@ -59,7 +58,7 @@ export async function GET(request: Request, { params }: RouteParams) {
           id,
           name,
           email,
-          image
+          avatar_url
         )
       `)
       .eq("campaign_id", id)
@@ -74,12 +73,12 @@ export async function GET(request: Request, { params }: RouteParams) {
       .from("gcash_donations")
       .select(`
         id,
-        amount,
         amount_php,
         donor_name,
         donor_email,
+        donor_phone,
         reference_number,
-        message,
+        notes,
         status,
         created_at
       `)
@@ -95,12 +94,12 @@ export async function GET(request: Request, { params }: RouteParams) {
       ...(pointDonations || []).map((d: any) => ({
         ...d,
         type: "points",
-        point_amount: d.point_amount || d.points_donated,
+        point_amount: d.points_donated,
       })),
       ...(gcashDonations || []).map((d: any) => ({
         ...d,
         type: "gcash",
-        amount: d.amount || d.amount_php,
+        amount: d.amount_php,
       })),
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     

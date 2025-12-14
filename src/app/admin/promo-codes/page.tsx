@@ -65,20 +65,44 @@ export default function AdminPromoCodesPage() {
   /**
    * Fetch promo codes from API
    */
+/**
+   * Fetch promo codes from API (Debug Version)
+   */
   const fetchPromoCodes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
+      console.log("Fetching promo codes..."); // DEBUG LOG
+      
       const response = await fetch("/api/admin/promo-codes");
       const data = await response.json();
       
+      console.log("API Response:", data); // DEBUG LOG: Check if promo_codes exists here
+      
       if (!response.ok) {
-        throw new Error(data.error || "Failed to fetch promo codes");
+        throw new Error(data.message || "Failed to fetch promo codes");
       }
       
-      setPromoCodes(data.promoCodes || []);
+      // Handle both camelCase (promoCodes) and snake_case (promo_codes) just in case
+      const rawCodes = data.promo_codes || data.promoCodes || [];
+      
+      console.log("Raw Codes Found:", rawCodes.length, rawCodes); // DEBUG LOG
+      
+      const mappedCodes = rawCodes.map((code: any) => ({
+        ...code,
+        // Ensure point_value exists. If code.value is missing, default to code.point_value, or 0
+        point_value: code.value !== undefined ? code.value : (code.point_value || 0),
+        
+        // Ensure times_used exists. If code.current_uses is missing, default to 0
+        times_used: code.current_uses !== undefined ? code.current_uses : (code.times_used || 0),
+      }));
+
+      console.log("Final Mapped Codes:", mappedCodes); // DEBUG LOG
+
+      setPromoCodes(mappedCodes);
     } catch (err) {
+      console.error("Fetch Error:", err); // DEBUG LOG
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
@@ -171,19 +195,29 @@ export default function AdminPromoCodesPage() {
   /**
    * Save promo code (create or update)
    */
+  /**
+   * Save promo code (create or update)
+   */
   const handleSave = async () => {
     try {
       setSaving(true);
       
       const url = "/api/admin/promo-codes";
-      const method = editingCode ? "PUT" : "POST";
+      // FIX 1: Change "PUT" to "PATCH" to match your API route
+      const method = editingCode ? "PATCH" : "POST";
       
       // Prepare payload
       const payload = {
         ...(editingCode && { id: editingCode.id }),
         code: formData.code.toUpperCase().trim(),
         description: formData.description || null,
-        point_value: formData.point_value,
+        
+        // FIX 2: Change "point_value" to "value" to match API expectation
+        value: formData.point_value, 
+        
+        // Note: Check if your backend expects 'code_type'. 
+        // Based on your backend code, it defaults to 'points', so this is likely fine to omit.
+        
         max_uses: formData.max_uses || null,
         valid_from: formData.valid_from || null,
         valid_until: formData.valid_until || null,
@@ -199,7 +233,8 @@ export default function AdminPromoCodesPage() {
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || "Failed to save promo code");
+        // Only throw if success is false, using the message from backend
+        throw new Error(data.message || "Failed to save promo code");
       }
       
       // Refresh list

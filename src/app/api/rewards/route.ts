@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       .from('rewards')
       .select('*')
       .eq('is_active', true)
-      .order('point_cost', { ascending: true })
+      .order('cost', { ascending: true })  // Database uses 'cost' column
       .limit(limit);
 
     // Apply category filter if provided
@@ -55,7 +55,10 @@ export async function GET(request: NextRequest) {
         return false;
       }
       return true;
-    });
+    }).map(reward => ({
+      ...reward,
+      point_cost: reward.cost,  // Map 'cost' to 'point_cost' for frontend
+    }));
 
     return NextResponse.json({ 
       rewards: availableRewards,

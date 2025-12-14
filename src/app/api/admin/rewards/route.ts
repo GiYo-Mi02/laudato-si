@@ -58,9 +58,16 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
+    // Map database field names to frontend field names for compatibility
+    // Database uses 'cost', frontend expects 'point_cost'
+    const mappedRewards = (rewards || []).map(reward => ({
+      ...reward,
+      point_cost: reward.cost,  // Map 'cost' to 'point_cost' for frontend
+    }));
+
     return NextResponse.json({
       success: true,
-      rewards: rewards || [],
+      rewards: mappedRewards,
     });
 
   } catch (error) {
@@ -132,12 +139,11 @@ export async function POST(request: NextRequest) {
       .insert({
         name,
         description: description || null,
-        point_cost: costValue,  // Use correct column name from schema
+        cost: costValue,  // Use correct column name from actual database (001_add_gamification.sql)
         category,
         image_url: image_url || null,
         total_quantity: total_quantity || stock_quantity || null,
         remaining_quantity: total_quantity || stock_quantity || null,
-        valid_until: valid_until || null,
         is_active: true,
       })
       .select()
@@ -151,7 +157,7 @@ export async function POST(request: NextRequest) {
       'rewards',
       reward.id,
       undefined,
-      { name, point_cost: costValue, category }
+      { name, cost: costValue, category }
     );
 
     return NextResponse.json({

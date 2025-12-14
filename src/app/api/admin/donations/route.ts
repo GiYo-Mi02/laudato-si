@@ -55,9 +55,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Map database field names to frontend field names for compatibility
+    const mappedCampaigns = (campaigns || []).map(campaign => ({
+      ...campaign,
+      title: campaign.name,
+      goal_amount: campaign.goal_points,
+      current_amount: campaign.current_points,
+    }));
+
     return NextResponse.json({
       success: true,
-      campaigns: campaigns || [],
+      campaigns: mappedCampaigns,
     });
 
   } catch (error) {

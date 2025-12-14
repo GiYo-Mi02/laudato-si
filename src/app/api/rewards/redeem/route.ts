@@ -115,11 +115,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check user has enough points
-    if (userData.total_points < reward.point_cost) {
+    if (userData.total_points < reward.cost) {
       return NextResponse.json(
         { 
           error: 'Insufficient points',
-          required: reward.point_cost,
+          required: reward.cost,
           available: userData.total_points 
         }, 
         { status: 400 }
@@ -135,11 +135,11 @@ export async function POST(request: NextRequest) {
 
     // Create redemption record
     const { data: redemption, error: redemptionError } = await supabase
-      .from('reward_redemptions')
+      .from('redemptions')  // Use correct table name from 001_add_gamification.sql
       .insert({
         user_id: userData.id,
         reward_id: rewardId,
-        points_spent: reward.point_cost,
+        points_spent: reward.cost,  // Use correct column name 'cost'
         status: 'pending',
         redemption_code: redemptionCode,
         expires_at: expiresAt.toISOString(),
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
     const { error: pointsError } = await supabase
       .from('users')
       .update({ 
-        total_points: userData.total_points - reward.point_cost 
+        total_points: userData.total_points - reward.cost 
       })
       .eq('id', userData.id);
 
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
       .from('point_transactions')
       .insert({
         user_id: userData.id,
-        amount: -reward.point_cost, // Negative = spending
+        amount: -reward.cost, // Negative = spending
         transaction_type: 'reward_redemption',
         reference_id: redemption.id,
         description: `Redeemed: ${reward.name}`,
@@ -189,11 +189,11 @@ export async function POST(request: NextRequest) {
       .insert({
         actor_id: userData.id,
         action: 'reward_redeemed',
-        entity_type: 'reward_redemptions',
+        entity_type: 'redemptions',  // Use correct table name
         entity_id: redemption.id,
         new_values: { 
           reward_name: reward.name, 
-          points_spent: reward.point_cost,
+          points_spent: reward.cost,
           redemption_code: redemptionCode 
         },
       });
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
         ...redemption,
         reward,
       },
-      newPointsBalance: userData.total_points - reward.point_cost,
+      newPointsBalance: userData.total_points - reward.cost,
     });
 
   } catch (error) {
