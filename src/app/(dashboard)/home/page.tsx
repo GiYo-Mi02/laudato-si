@@ -30,7 +30,8 @@ import {
   Sparkles,
   CheckCircle2,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Heart
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -515,6 +516,15 @@ export default function HomePage() {
         >
           <Trophy className="w-5 h-5 mr-2 text-yellow-600" />
           Rankings
+        </Button>
+
+        <Button
+          variant="outline"
+          className="flex-1 py-6 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
+          onClick={() => router.push('/donate')}
+        >
+          <Heart className="w-5 h-5 mr-2 text-red-600" />
+          Donations
         </Button>
       </div>
 
