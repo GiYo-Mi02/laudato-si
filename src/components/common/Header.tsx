@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Leaf } from "lucide-react";
+import Link from "next/link";
 
 interface HeaderProps {
   userName?: string;
@@ -17,6 +18,7 @@ export function Header({ userName, onSignOut }: HeaderProps) {
       className="w-full px-4 py-4 md:px-8"
     >
       <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <Link href="/home">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-[#4A6B5C] flex items-center justify-center">
             <Leaf className="w-5 h-5 text-[#C8E86C]" />
@@ -30,6 +32,7 @@ export function Header({ userName, onSignOut }: HeaderProps) {
             </p>
           </div>
         </div>
+        </Link>
 
         {userName && (
           <div className="flex items-center gap-4">
