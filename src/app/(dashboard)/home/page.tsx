@@ -500,7 +500,7 @@ export default function HomePage() {
       )}
 
       {/* Quick Actions */}
-      <div className="flex gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <Button
           variant="outline"
           className="flex-1 py-6 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20"
