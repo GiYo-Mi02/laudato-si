@@ -130,40 +130,78 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { redemption_id, qr_code } = await request.json();
+    const { redemption_id, qr_code, redemption_code } = await request.json();
 
-    if (!redemption_id && !qr_code) {
+    if (!redemption_id && !qr_code && !redemption_code) {
       return NextResponse.json(
         { success: false, message: 'Redemption ID or QR code is required' },
         { status: 400 }
       );
     }
 
-    let redemptionIdToVerify = redemption_id;
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    let redemptionIdToVerify: string | undefined = redemption_id;
+    let redemptionCodeToVerify: string | undefined = redemption_code;
     let securityValidated = false;
 
-    // If QR code provided, validate its security
+    // If QR code provided, validate its security.
+    // If it's not a secure-QR JSON payload, fall back to treating it as a redemption ID/code.
     if (qr_code) {
       const qrValidation = validateSecureQR(qr_code);
-      
-      if (!qrValidation.isValid) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            message: qrValidation.error || 'Invalid QR code',
-            isSecurityError: true,
-          },
-          { status: 400 }
-        );
-      }
 
-      // Use the redemption ID from the validated QR data
-      redemptionIdToVerify = qrValidation.data!.redemptionId;
-      securityValidated = true;
+      if (qrValidation.isValid) {
+        redemptionIdToVerify = qrValidation.data!.redemptionId;
+        redemptionCodeToVerify = undefined;
+        securityValidated = true;
+      } else {
+        const errorMessage = qrValidation.error || 'Invalid QR code';
+        const isExpired = /expired/i.test(errorMessage);
+        const isSignatureError = /signature|tamper|fake/i.test(errorMessage);
+        const isFormatError = /format|missing required data|unsupported/i.test(errorMessage);
+
+        // If the QR looks tampered/expired, do NOT fall back.
+        if (isExpired || isSignatureError) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: errorMessage,
+              isSecurityError: true,
+            },
+            { status: 400 }
+          );
+        }
+
+        // Otherwise (typically manual entry), treat input as redemption ID or redemption_code.
+        if (!redemptionIdToVerify && !redemptionCodeToVerify && (isFormatError || !qr_code.trim().startsWith('{'))) {
+          if (UUID_REGEX.test(qr_code.trim())) {
+            redemptionIdToVerify = qr_code.trim();
+          } else {
+            redemptionCodeToVerify = qr_code.trim();
+          }
+        } else if (!isFormatError) {
+          // Unknown validation failure: treat as security error.
+          return NextResponse.json(
+            {
+              success: false,
+              message: errorMessage,
+              isSecurityError: true,
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    if (!redemptionIdToVerify && !redemptionCodeToVerify) {
+      return NextResponse.json(
+        { success: false, message: 'Redemption ID, redemption code, or QR code is required' },
+        { status: 400 }
+      );
     }
 
     // Find the redemption
-    const { data: redemption, error: findError } = await supabase
+    let findQuery = supabase
       .from('redemptions')
       .select(`
         *,
@@ -177,9 +215,15 @@ export async function POST(request: NextRequest) {
           name,
           category
         )
-      `)
-      .eq('id', redemptionIdToVerify)
-      .single();
+      `);
+
+    if (redemptionIdToVerify) {
+      findQuery = findQuery.eq('id', redemptionIdToVerify);
+    } else if (redemptionCodeToVerify) {
+      findQuery = findQuery.eq('redemption_code', redemptionCodeToVerify);
+    }
+
+    const { data: redemption, error: findError } = await findQuery.single();
 
     if (findError || !redemption) {
       return NextResponse.json(
