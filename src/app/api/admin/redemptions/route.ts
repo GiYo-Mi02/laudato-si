@@ -148,7 +148,21 @@ export async function POST(request: NextRequest) {
     // If QR code provided, validate its security.
     // If it's not a secure-QR JSON payload, fall back to treating it as a redemption ID/code.
     if (qr_code) {
-      const qrValidation = validateSecureQR(qr_code);
+      const rawInput = String(qr_code).trim();
+      let qrPayload = rawInput;
+
+      // If a QR encodes a URL (e.g. https://.../scan?qr=...), extract the actual payload.
+      try {
+        const url = new URL(rawInput);
+        const embedded = url.searchParams.get('qr');
+        if (embedded) {
+          qrPayload = decodeURIComponent(embedded);
+        }
+      } catch {
+        // Not a URL, keep as-is
+      }
+
+      const qrValidation = validateSecureQR(qrPayload);
 
       if (qrValidation.isValid) {
         redemptionIdToVerify = qrValidation.data!.redemptionId;
@@ -173,11 +187,11 @@ export async function POST(request: NextRequest) {
         }
 
         // Otherwise (typically manual entry), treat input as redemption ID or redemption_code.
-        if (!redemptionIdToVerify && !redemptionCodeToVerify && (isFormatError || !qr_code.trim().startsWith('{'))) {
-          if (UUID_REGEX.test(qr_code.trim())) {
-            redemptionIdToVerify = qr_code.trim();
+        if (!redemptionIdToVerify && !redemptionCodeToVerify && (isFormatError || !rawInput.startsWith('{'))) {
+          if (UUID_REGEX.test(rawInput)) {
+            redemptionIdToVerify = rawInput;
           } else {
-            redemptionCodeToVerify = qr_code.trim();
+            redemptionCodeToVerify = rawInput;
           }
         } else if (!isFormatError) {
           // Unknown validation failure: treat as security error.

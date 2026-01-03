@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Camera, CameraOff, FlipHorizontal, Loader2, X, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import jsQR from 'jsqr';
 
 interface QRScannerProps {
   onScan: (data: string) => void;
@@ -30,6 +31,7 @@ export default function QRScanner({ onScan, onClose, isOpen = true }: QRScannerP
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [hasCamera, setHasCamera] = useState(true);
   const [lastScanned, setLastScanned] = useState<string | null>(null);
+  const lastDecodeAtRef = useRef<number>(0);
 
   // Initialize camera
   const startCamera = useCallback(async () => {
@@ -96,22 +98,37 @@ export default function QRScanner({ onScan, onClose, isOpen = true }: QRScannerP
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     try {
-      // Use BarcodeDetector API if available
+      // Throttle decoding to reduce CPU load
+      const now = Date.now();
+      if (now - lastDecodeAtRef.current < 200) {
+        animationRef.current = requestAnimationFrame(scanFrame);
+        return;
+      }
+      lastDecodeAtRef.current = now;
+
+      let data: string | undefined;
+
+      // Prefer BarcodeDetector if available
       if ('BarcodeDetector' in window) {
-        const barcodeDetector = new (window as any).BarcodeDetector({
-          formats: ['qr_code'],
-        });
+        const barcodeDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
         const barcodes = await barcodeDetector.detect(canvas);
-        
         if (barcodes.length > 0) {
-          const data = barcodes[0].rawValue;
-          if (data && data !== lastScanned) {
-            setLastScanned(data);
-            onScan(data);
-            // Reset after delay to allow scanning same code again
-            setTimeout(() => setLastScanned(null), 2000);
-          }
+          data = barcodes[0].rawValue;
         }
+      } else {
+        // Fallback: jsQR
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const result = jsQR(imageData.data, imageData.width, imageData.height);
+        if (result?.data) {
+          data = result.data;
+        }
+      }
+
+      if (data && data !== lastScanned) {
+        setLastScanned(data);
+        onScan(data);
+        // Reset after delay to allow scanning same code again
+        setTimeout(() => setLastScanned(null), 2000);
       }
     } catch (err) {
       // Silently continue if detection fails
