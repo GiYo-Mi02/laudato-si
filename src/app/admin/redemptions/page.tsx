@@ -268,7 +268,7 @@ export default function AdminRedemptionsPage() {
                     )}
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {lastVerified.reward} claimed by {lastVerified.user}
+                    {typeof lastVerified.reward === 'string' ? lastVerified.reward : lastVerified.reward.name} claimed by {typeof lastVerified.user === 'string' ? lastVerified.user : lastVerified.user.email || lastVerified.user.display_name}
                   </p>
                   {lastVerifiedSecure && (
                     <p className="text-xs text-green-600 dark:text-green-400 mt-1">
