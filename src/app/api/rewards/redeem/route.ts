@@ -204,6 +204,7 @@ export async function POST(request: NextRequest) {
         ...redemption,
         reward,
       },
+      redemption_code: redemptionCode,
       newPointsBalance: userData.total_points - reward.cost,
     });
 

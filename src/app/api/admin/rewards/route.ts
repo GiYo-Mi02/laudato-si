@@ -134,6 +134,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Log the image URL being saved
+    console.log('💾 Creating reward with image_url:', image_url || '(none)');
+    
     const { data: reward, error } = await supabase
       .from('rewards')
       .insert({
@@ -148,6 +151,8 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single();
+    
+    console.log('✅ Reward created with ID:', reward?.id, 'Image URL in DB:', reward?.image_url);
 
     if (error) throw error;
 
@@ -248,7 +253,13 @@ async function handleUpdate(request: NextRequest) {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ UPDATE ERROR:', error);
+      throw error;
+    }
+    
+    console.log('✅ UPDATE SUCCESS - Reward from DB:', reward);
+    console.log('📷 UPDATE SUCCESS - image_url from DB:', reward?.image_url || '(none)');
 
     await logAdminAction(
       adminCheck.user.id,

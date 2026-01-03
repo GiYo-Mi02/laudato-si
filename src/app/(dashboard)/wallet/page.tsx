@@ -70,6 +70,9 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
   const [selectedRedemption, setSelectedRedemption] = useState<Redemption | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [qrData, setQrData] = useState<string | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
 
   /**
    * Fetch user's redemptions
@@ -135,10 +138,40 @@ export default function WalletPage() {
   }, [fetchRedemptions]);
 
   /**
-   * Open QR code dialog for redemption
+   * Open QR code dialog and generate secure QR
    */
-  const openQRDialog = (redemption: Redemption) => {
+  const openQRDialog = async (redemption: Redemption) => {
     setSelectedRedemption(redemption);
+    setQrData(null);
+    setQrError(null);
+    setQrLoading(true);
+
+    try {
+      // Generate secure QR code from server
+      const response = await fetch('/api/rewards/qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ redemptionId: redemption.id }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate QR code');
+      }
+
+      setQrData(data.qrData);
+    } catch (error) {
+      console.error('QR generation error:', error);
+      setQrError(error instanceof Error ? error.message : 'Failed to generate QR code');
+      toast({
+        title: "QR Generation Failed",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setQrLoading(false);
+    }
   };
 
   /**
@@ -412,16 +445,40 @@ export default function WalletPage() {
             <div className="space-y-4">
               {/* QR Code */}
               <div className="flex justify-center p-4 bg-white rounded-xl">
-                <QRCode
-                  value={JSON.stringify({
-                    code: selectedRedemption.redemption_code,
-                    reward: selectedRedemption.reward.name,
-                    id: selectedRedemption.id,
-                  })}
-                  size={192}
-                  fgColor="#16a34a"
-                  bgColor="#ffffff"
-                />
+                {qrLoading ? (
+                  <div className="w-48 h-48 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="w-12 h-12 mx-auto border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+                      <p className="mt-4 text-sm text-gray-500">Generating secure QR...</p>
+                    </div>
+                  </div>
+                ) : qrError ? (
+                  <div className="w-48 h-48 flex items-center justify-center bg-red-50 rounded-lg">
+                    <div className="text-center p-4">
+                      <p className="text-sm text-red-600">{qrError}</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openQRDialog(selectedRedemption)}
+                        className="mt-4"
+                      >
+                        Retry
+                      </Button>
+                    </div>
+                  </div>
+                ) : qrData ? (
+                  <div className="relative">
+                    <QRCode
+                      value={qrData}
+                      size={192}
+                      fgColor="#16a34a"
+                      bgColor="#ffffff"
+                    />
+                    <div className="absolute -bottom-2 -right-2 bg-green-500 rounded-full p-1.5">
+                      <CheckCircle2 className="w-5 h-5 text-white" />
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               {/* Reward Info */}
@@ -460,13 +517,21 @@ export default function WalletPage() {
               </div>
 
               {/* Instructions */}
-              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
+              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center space-y-2">
                 <p className="text-sm font-medium text-green-800 dark:text-green-300">
                   📱 Show this QR code to claim your reward
                 </p>
-                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                <p className="text-xs text-green-600 dark:text-green-400">
                   The staff will scan and verify your code
                 </p>
+                {qrData && (
+                  <div className="mt-2 pt-2 border-t border-green-200 dark:border-green-800">
+                    <p className="text-xs text-green-700 dark:text-green-400 flex items-center justify-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Secure QR • Valid for 5 minutes
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Expiry Warning */}

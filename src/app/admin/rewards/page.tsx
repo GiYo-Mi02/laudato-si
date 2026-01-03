@@ -191,10 +191,14 @@ export default function AdminRewardsPage() {
         throw new Error(data.error || "Failed to save reward");
       }
       
+      // Small delay to let database commit before refreshing
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Refresh rewards list
       await fetchRewards();
       setShowModal(false);
     } catch (err) {
+      console.error('❌ Save error:', err);
       alert(err instanceof Error ? err.message : "Failed to save reward");
     } finally {
       setSaving(false);
@@ -551,6 +555,7 @@ export default function AdminRewardsPage() {
                         const text = await response.text();
                         
                         if (!response.ok || !text) {
+                          console.error('Upload failed, using base64 fallback');
                           // Fallback to base64 if upload fails
                           return new Promise<string>((resolve) => {
                             const reader = new FileReader();
@@ -560,8 +565,17 @@ export default function AdminRewardsPage() {
                         }
                         
                         const data = JSON.parse(text);
+                        
+                        // Show warning if using base64 fallback
+                        if (data.warning) {
+                          console.warn('⚠️ Storage Warning:', data.warning);
+                          console.info('📖 Setup Guide:', data.setupGuide);
+                          // Still use the base64 URL returned
+                        }
+                        
                         return data.url;
                       } catch (error) {
+                        console.error('Upload error:', error);
                         // Fallback to base64 on any error
                         return new Promise<string>((resolve) => {
                           const reader = new FileReader();
@@ -571,6 +585,9 @@ export default function AdminRewardsPage() {
                       }
                     }}
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 Tip: If images don't save, check document/STORAGE_SETUP_GUIDE.md
+                  </p>
                 </div>
                 
                 {/* Active Toggle */}

@@ -79,9 +79,15 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Storage upload error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       
       // If storage doesn't exist, return base64 as fallback
-      if (error.message.includes('Bucket not found') || error.message.includes('not found')) {
+      if (error.message.includes('Bucket not found') || 
+          error.message.includes('not found') ||
+          error.message.includes('bucket')) {
+        console.warn('⚠️ Storage bucket "images" not found. Using base64 fallback.');
+        console.warn('📖 See document/STORAGE_SETUP_GUIDE.md to set up Supabase Storage');
+        
         // Return data URL as fallback
         const base64 = buffer.toString('base64');
         const dataUrl = `data:${file.type};base64,${base64}`;
@@ -89,12 +95,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           url: dataUrl,
-          message: 'Image stored as data URL (storage not configured)',
+          warning: 'Storage not configured - using base64 (not recommended for production)',
+          setupGuide: 'See document/STORAGE_SETUP_GUIDE.md',
         });
       }
       
       return NextResponse.json(
-        { success: false, message: 'Failed to upload image' },
+        { 
+          success: false, 
+          message: 'Failed to upload image',
+          error: error.message,
+        },
         { status: 500 }
       );
     }

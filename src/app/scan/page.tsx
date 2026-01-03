@@ -3,75 +3,202 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Leaf, Loader2 } from "lucide-react";
+import { Leaf, Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+type Status = "loading" | "success" | "error" | "expired" | "tampered";
 
 function ScanContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<"loading" | "redirecting">("loading");
+  const { toast } = useToast();
+  const [status, setStatus] = useState<Status>("loading");
+  const [message, setMessage] = useState("");
+  const [redemptionDetails, setRedemptionDetails] = useState<any>(null);
 
   useEffect(() => {
-    // Get QR code ID from URL params (e.g., /scan?qr=location-123)
-    const qrId = searchParams.get("qr");
-    
-    // Simulate processing the QR code
-    const timer = setTimeout(() => {
-      setStatus("redirecting");
-      // Redirect to main page after brief animation
-      setTimeout(() => {
-        router.push("/");
-      }, 1000);
-    }, 1500);
+    const verifyQR = async () => {
+      // Get QR code data from URL params (e.g., /scan?qr=<encrypted-data>)
+      const qrData = searchParams.get("qr");
+      
+      if (!qrData) {
+        setStatus("error");
+        setMessage("No QR code data found");
+        return;
+      }
 
-    return () => clearTimeout(timer);
-  }, [router, searchParams]);
+      try {
+        // Call verification API
+        const response = await fetch('/api/rewards/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ qrData }),
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          setStatus("success");
+          setMessage(result.message);
+          setRedemptionDetails(result.redemption);
+          
+          toast({
+            title: "Success!",
+            description: result.message,
+          });
+
+          // Redirect after 3 seconds
+          setTimeout(() => {
+            router.push("/admin/redemptions");
+          }, 3000);
+        } else {
+          // Handle different error types
+          if (result.expired) {
+            setStatus("expired");
+            setMessage("QR code has expired");
+          } else if (result.tampered) {
+            setStatus("tampered");
+            setMessage("QR code appears to be tampered with");
+          } else {
+            setStatus("error");
+            setMessage(result.error || "Failed to verify QR code");
+          }
+
+          toast({
+            title: "Verification Failed",
+            description: result.error || "Invalid QR code",
+            variant: "destructive",
+          });
+
+          // Redirect back after 3 seconds
+          setTimeout(() => {
+            router.push("/admin/redemptions");
+          }, 3000);
+        }
+      } catch (error) {
+        console.error('QR verification error:', error);
+        setStatus("error");
+        setMessage("Failed to verify QR code");
+        
+        toast({
+          title: "Error",
+          description: "Failed to process QR code",
+          variant: "destructive",
+        });
+
+        setTimeout(() => {
+          router.push("/admin/redemptions");
+        }, 3000);
+      }
+    };
+
+    verifyQR();
+  }, [router, searchParams, toast]);
+
+  const getIcon = () => {
+    switch (status) {
+      case "success":
+        return <CheckCircle2 className="w-12 h-12 text-green-600" />;
+      case "expired":
+        return <AlertTriangle className="w-12 h-12 text-orange-500" />;
+      case "tampered":
+      case "error":
+        return <XCircle className="w-12 h-12 text-red-600" />;
+      default:
+        return <Leaf className="w-12 h-12 text-[#C8E86C]" />;
+    }
+  };
+
+  const getBackgroundColor = () => {
+    switch (status) {
+      case "success":
+        return "bg-green-100";
+      case "expired":
+        return "bg-orange-100";
+      case "tampered":
+      case "error":
+        return "bg-red-100";
+      default:
+        return "bg-[#4A6B5C]";
+    }
+  };
 
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4 }}
-      className="text-center"
+      className="text-center max-w-md mx-auto"
     >
-      {/* Animated leaf icon */}
+      {/* Status icon */}
       <motion.div
-        animate={{
+        animate={status === "loading" ? {
           scale: [1, 1.1, 1],
           rotate: [0, 5, -5, 0],
-        }}
+        } : {}}
         transition={{
           duration: 2,
-          repeat: Infinity,
+          repeat: status === "loading" ? Infinity : 0,
           ease: "easeInOut",
         }}
-        className="w-24 h-24 rounded-full bg-[#4A6B5C] flex items-center justify-center mx-auto mb-8"
+        className={`w-24 h-24 rounded-full ${getBackgroundColor()} flex items-center justify-center mx-auto mb-8`}
       >
-        <Leaf className="w-12 h-12 text-[#C8E86C]" />
+        {getIcon()}
       </motion.div>
 
       <h1 className="font-display text-3xl md:text-4xl text-[#2C2C2C] mb-4">
-        Laudato Si&apos;
+        {status === "success" ? "Success!" : status === "loading" ? "Verifying QR Code" : "Verification Failed"}
       </h1>
 
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
-        className="flex items-center justify-center gap-3 text-muted-foreground"
+        className="text-muted-foreground mb-6"
       >
-        <Loader2 className="w-5 h-5 animate-spin text-[#4A6B5C]" />
-        <span className="font-body">
-          {status === "loading" ? "Processing QR code..." : "Redirecting..."}
-        </span>
+        {status === "loading" ? (
+          <div className="flex items-center justify-center gap-3">
+            <Loader2 className="w-5 h-5 animate-spin text-[#4A6B5C]" />
+            <span className="font-body">Processing QR code...</span>
+          </div>
+        ) : (
+          <p className="font-body text-lg">{message}</p>
+        )}
       </motion.div>
+
+      {/* Redemption details */}
+      {redemptionDetails && status === "success" && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 text-left"
+        >
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Reward</p>
+              <p className="font-semibold text-[#2C2C2C]">{redemptionDetails.rewardName}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">User</p>
+              <p className="font-semibold text-[#2C2C2C]">{redemptionDetails.userName}</p>
+              <p className="text-xs text-muted-foreground">{redemptionDetails.userEmail}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Points Cost</p>
+              <p className="font-semibold text-[#4A6B5C]">{redemptionDetails.pointsCost} points</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
+        transition={{ delay: 0.7 }}
         className="font-mono text-sm text-muted-foreground mt-8"
       >
-        UMak Campus Growth Initiative
+        {status === "success" ? "Redirecting to redemptions..." : status === "loading" ? "UMak Campus Growth Initiative" : "Redirecting back..."}
       </motion.p>
     </motion.div>
   );

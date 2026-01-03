@@ -1,0 +1,276 @@
+# QR Code Security Flow Diagram
+
+```
+═══════════════════════════════════════════════════════════════════════════
+                        SECURE QR CODE SYSTEM FLOW
+═══════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         USER SIDE (Student/Employee)                     │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    1. User redeems reward
+        ↓
+    [POST /api/rewards/redeem]
+        ↓
+    Redemption created with unique code (RDM-ABC123)
+        ↓
+    User goes to "My Wallet"
+        ↓
+    User clicks on redemption
+        ↓
+    ┌─────────────────────────────────────────────────┐
+    │  SECURE QR GENERATION                           │
+    ├─────────────────────────────────────────────────┤
+    │  [POST /api/rewards/qr]                         │
+    │                                                  │
+    │  1. Validate user owns redemption               │
+    │  2. Check redemption status (must be pending)   │
+    │  3. Check not expired                           │
+    │  4. Generate signature:                         │
+    │     data = redemptionId|code|userId|rewardId|   │
+    │            timestamp|version                    │
+    │     signature = HMAC-SHA256(data, QR_SECRET)    │
+    │  5. Create QR JSON:                             │
+    │     {                                            │
+    │       redemptionId, redemptionCode,             │
+    │       userId, rewardId,                         │
+    │       timestamp: now(),                         │
+    │       signature: "abc123...",                   │
+    │       version: "1.0"                            │
+    │     }                                            │
+    │  6. Return signed QR data                       │
+    └─────────────────────────────────────────────────┘
+        ↓
+    QR Code displayed with:
+    • Visual QR code
+    • "Secure QR • Valid for 5 minutes" badge
+    • Green checkmark indicator
+    • Redemption code shown
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    ADMIN SIDE (Canteen Staff)                            │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    1. Admin opens "Reward Verification"
+        ↓
+    2. Admin clicks "Open Camera"
+        ↓
+    3. Camera scans QR code OR manual entry
+        ↓
+    ┌─────────────────────────────────────────────────┐
+    │  QR CODE VALIDATION                             │
+    ├─────────────────────────────────────────────────┤
+    │  [POST /api/admin/redemptions]                  │
+    │                                                  │
+    │  Step 1: Parse QR Code                          │
+    │  ├─ Try parse as JSON                           │
+    │  └─ If fail → ERROR: "Invalid QR format"        │
+    │                                                  │
+    │  Step 2: Check Required Fields                  │
+    │  ├─ redemptionId?                               │
+    │  ├─ redemptionCode?                             │
+    │  ├─ userId?                                     │
+    │  ├─ rewardId?                                   │
+    │  ├─ timestamp?                                  │
+    │  ├─ signature?                                  │
+    │  ├─ version?                                    │
+    │  └─ If any missing → ERROR: "Missing data"      │
+    │                                                  │
+    │  Step 3: Check Version                          │
+    │  ├─ version === "1.0"?                          │
+    │  └─ If not → ERROR: "Unsupported version"       │
+    │                                                  │
+    │  Step 4: Check Timestamp                        │
+    │  ├─ age = now() - qr.timestamp                  │
+    │  ├─ If age > 5 minutes → ERROR: "Expired"       │
+    │  ├─ If age < 0 → ERROR: "Future timestamp"      │
+    │  └─ If pass → Continue                          │
+    │                                                  │
+    │  Step 5: Verify Signature                       │
+    │  ├─ Recreate data string:                       │
+    │  │   redemptionId|code|userId|rewardId|         │
+    │  │   timestamp|version                          │
+    │  ├─ Calculate expected signature:               │
+    │  │   HMAC-SHA256(data, QR_SECRET)               │
+    │  ├─ Compare with QR signature                   │
+    │  ├─ If match → ✅ VALID                         │
+    │  └─ If not match → ❌ ERROR: "Fake/Tampered"    │
+    │                                                  │
+    │  Step 6: Check Redemption                       │
+    │  ├─ Load from database                          │
+    │  ├─ Status must be "pending"                    │
+    │  ├─ Must not be expired                         │
+    │  └─ Must not be cancelled                       │
+    │                                                  │
+    │  Step 7: Mark as Verified                       │
+    │  ├─ Update status to "verified"                 │
+    │  ├─ Set verified_at timestamp                   │
+    │  └─ Log audit entry                             │
+    └─────────────────────────────────────────────────┘
+        ↓
+    ┌─────────────────────────────────────────────────┐
+    │  SUCCESS RESPONSE                               │
+    ├─────────────────────────────────────────────────┤
+    │  Display to admin:                              │
+    │  • Green success box                            │
+    │  • "✅ Verified & Secure!"                      │
+    │  • "🔒 Secure QR" badge                         │
+    │  • Details: User name, Reward name              │
+    │  • Security info:                               │
+    │    "QR signature verified •                     │
+    │     Timestamp validated •                       │
+    │     Tampering check passed"                     │
+    └─────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        SECURITY ATTACK SCENARIOS                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+ATTACK 1: Screenshot Sharing
+User A redeems → Shows QR → User B screenshots it → Tries to use
+│
+├─ After 5 minutes: ❌ BLOCKED - "QR code has expired"
+└─ Before 5 min: ❌ BLOCKED - Status already "verified" from first use
+
+ATTACK 2: Fake QR Generation
+Attacker creates: {"redemptionCode": "RDM-FAKE123", ...}
+│
+└─ ❌ BLOCKED - Signature validation fails: "Invalid signature - fake"
+
+ATTACK 3: Tampering (Edit Values)
+User changes points_spent: 100 → 10 in QR JSON
+│
+└─ ❌ BLOCKED - Signature doesn't match altered data
+
+ATTACK 4: Replay Attack
+Same valid QR scanned multiple times
+│
+├─ First scan: ✅ SUCCESS - Status: pending → verified
+└─ Second scan: ❌ BLOCKED - Status already "verified"
+
+ATTACK 5: Clock Manipulation
+User sets device time forward to extend expiration
+│
+├─ Server validates with server timestamp (not client)
+└─ ❌ BLOCKED - "Timestamp in future" or expired
+
+ATTACK 6: Code Swapping
+User redeems cheap item, edits QR to expensive item
+│
+├─ Changes rewardId in QR
+└─ ❌ BLOCKED - Signature validation fails
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            DATA FLOW                                     │
+└─────────────────────────────────────────────────────────────────────────┘
+
+GENERATION (User Side):
+┌──────────┐       ┌──────────┐       ┌──────────┐       ┌──────────┐
+│ Frontend │──────▶│ QR API   │──────▶│ Supabase │──────▶│ Frontend │
+│ (Wallet) │       │ /rewards │       │ Validate │       │ Display  │
+└──────────┘       │   /qr    │       │ Redmptn  │       │ QR Code  │
+                   │          │       └──────────┘       └──────────┘
+                   │  Create  │              ▲
+                   │  HMAC    │              │
+                   │ Signature│              │
+                   └──────────┘              │
+                        │                    │
+                        │                    │
+                        ▼                    │
+                   ┌──────────┐              │
+                   │ QR_SECRET│──────────────┘
+                   │ (Env Var)│
+                   └──────────┘
+
+VALIDATION (Admin Side):
+┌──────────┐       ┌──────────┐       ┌──────────┐       ┌──────────┐
+│  Camera  │──────▶│ Frontend │──────▶│ Admin    │──────▶│ Validate │
+│  Scan    │       │ (Redmptn)│       │ API      │       │ Secure   │
+└──────────┘       └──────────┘       │ /admin/  │       │ QR       │
+                                       │redmptn   │       └──────────┘
+                                       └──────────┘             │
+                                            │                   │
+                                            │                   ▼
+                                            │            ┌──────────┐
+                                            │            │ QR_SECRET│
+                                            │            │ (Verify) │
+                                            │            └──────────┘
+                                            │                   │
+                                            ▼                   ▼
+                                       ┌──────────┐       ┌──────────┐
+                                       │ Supabase │◀──────│ Valid?   │
+                                       │ Update   │       │  YES/NO  │
+                                       │ Status   │       └──────────┘
+                                       └──────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        SECURITY GUARANTEES                               │
+└─────────────────────────────────────────────────────────────────────────┘
+
+✅ CRYPTOGRAPHIC INTEGRITY
+   • HMAC-SHA256 signature
+   • 256-bit security strength
+   • Industry standard algorithm
+
+✅ FRESHNESS
+   • 5-minute maximum lifetime
+   • Server timestamp validation
+   • No clock manipulation possible
+
+✅ AUTHENTICITY
+   • Secret key required (QR_SECRET)
+   • Unknown to users/attackers
+   • Stored securely server-side only
+
+✅ ONE-TIME USE
+   • Status check: pending → verified
+   • Database transaction ensures atomicity
+   • Cannot reuse verified codes
+
+✅ BINDING
+   • Tied to specific redemption ID
+   • Includes user ID verification
+   • Includes reward ID verification
+
+✅ NON-REPUDIATION
+   • All attempts logged in audit_logs
+   • Timestamp of verification recorded
+   • Admin ID recorded
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        MONITORING POINTS                                 │
+└─────────────────────────────────────────────────────────────────────────┘
+
+Track these metrics in production:
+
+1. QR Generation Rate
+   └─ Normal: 1-2 per redemption
+   └─ Alert: > 10/min per user
+
+2. Signature Failures
+   └─ Normal: < 1%
+   └─ Alert: > 5% (possible attack)
+
+3. Expired QR Scans
+   └─ Normal: < 5%
+   └─ Alert: > 20% (UX issue or sharing)
+
+4. Multiple Scan Attempts
+   └─ Normal: 1-2 per code
+   └─ Alert: > 5 (screenshot sharing)
+
+5. Verification Success Rate
+   └─ Target: > 95%
+   └─ Alert: < 90%
+
+
+═══════════════════════════════════════════════════════════════════════════
+                              END OF FLOW
+═══════════════════════════════════════════════════════════════════════════
+```

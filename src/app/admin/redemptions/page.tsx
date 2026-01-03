@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { QrCode, Search, CheckCircle2, XCircle, Clock, Gift, Camera, CameraOff } from 'lucide-react';
+import { QrCode, Search, CheckCircle2, XCircle, Clock, Gift, Camera, CameraOff, Shield, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,6 +56,7 @@ export default function AdminRedemptionsPage() {
   const [manualCode, setManualCode] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [lastVerified, setLastVerified] = useState<Redemption | null>(null);
+  const [lastVerifiedSecure, setLastVerifiedSecure] = useState<boolean>(false);
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('pending');
@@ -103,17 +104,22 @@ export default function AdminRedemptionsPage() {
       const data = await response.json();
 
       if (data.success) {
+        const isSecure = data.securityValidated || false;
+        setLastVerifiedSecure(isSecure);
+        
         toast({
-          title: '✅ Verified!',
-          description: `${data.redemption.reward} for ${data.redemption.user}`,
+          title: isSecure ? '✅ Verified & Secure!' : '✅ Verified',
+          description: `${data.redemption.reward} for ${data.redemption.user}${isSecure ? ' (Secure QR)' : ''}`,
         });
         setLastVerified(data.redemption);
         setManualCode('');
         // Refresh list
         fetchRedemptions(statusFilter);
       } else {
+        // Check if it's a security error
+        const isSecurityError = data.isSecurityError || false;
         toast({
-          title: 'Verification Failed',
+          title: isSecurityError ? '🚨 Security Alert' : 'Verification Failed',
           description: data.message,
           variant: 'destructive',
         });
@@ -247,20 +253,61 @@ export default function AdminRedemptionsPage() {
 
           {/* Last Verified Display */}
           {lastVerified && (
-            <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+            <div className={`mt-6 p-4 rounded-lg ${lastVerifiedSecure ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-300' : 'bg-green-50 dark:bg-green-900/20'}`}>
               <div className="flex items-center gap-4">
                 <CheckCircle2 className="w-12 h-12 text-green-600" />
-                <div>
-                  <p className="text-lg font-semibold text-green-700 dark:text-green-400">
-                    Successfully Verified!
-                  </p>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-lg font-semibold text-green-700 dark:text-green-400">
+                      Successfully Verified!
+                    </p>
+                    {lastVerifiedSecure && (
+                      <Badge className="bg-green-600 text-white text-xs">
+                        🔒 Secure QR
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {lastVerified.reward?.name} claimed by {lastVerified.user?.name}
+                    {lastVerified.reward} claimed by {lastVerified.user}
                   </p>
+                  {lastVerifiedSecure && (
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                      ✓ QR signature verified • Timestamp validated • Tampering check passed
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Security Info Banner */}
+      <Card className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">
+                🔒 Security Features Enabled
+              </p>
+              <p className="text-xs text-blue-700 dark:text-blue-400">
+                All QR codes are cryptographically signed with HMAC-SHA256 and expire after 5 minutes. 
+                The system automatically detects fake, tampered, or expired codes.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span className="inline-flex items-center text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
+                  ✓ Signature Validation
+                </span>
+                <span className="inline-flex items-center text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
+                  ✓ Timestamp Check
+                </span>
+                <span className="inline-flex items-center text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
+                  ✓ Tampering Detection
+                </span>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

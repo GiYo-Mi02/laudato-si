@@ -13,6 +13,7 @@ import { getServerSession } from 'next-auth';
 import type { Session } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { validateAdminSession, hasPermission, logAdminAction } from '@/lib/adminAuth';
+import { validateSecureQR } from '@/lib/qrSecurity';
 
 /**
  * GET /api/admin/redemptions
@@ -138,8 +139,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let redemptionIdToVerify = redemption_id;
+    let securityValidated = false;
+
+    // If QR code provided, validate its security
+    if (qr_code) {
+      const qrValidation = validateSecureQR(qr_code);
+      
+      if (!qrValidation.isValid) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            message: qrValidation.error || 'Invalid QR code',
+            isSecurityError: true,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Use the redemption ID from the validated QR data
+      redemptionIdToVerify = qrValidation.data!.redemptionId;
+      securityValidated = true;
+    }
+
     // Find the redemption
-    let query = supabase
+    const { data: redemption, error: findError } = await supabase
       .from('redemptions')
       .select(`
         *,
@@ -153,15 +177,9 @@ export async function POST(request: NextRequest) {
           name,
           category
         )
-      `);
-
-    if (qr_code) {
-      query = query.eq('redemption_code', qr_code);
-    } else {
-      query = query.eq('id', redemption_id);
-    }
-
-    const { data: redemption, error: findError } = await query.single();
+      `)
+      .eq('id', redemptionIdToVerify)
+      .single();
 
     if (findError || !redemption) {
       return NextResponse.json(
@@ -237,6 +255,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Redemption verified successfully!',
+      securityValidated,
       redemption: {
         id: redemption.id,
         user: redemption.users?.name || redemption.users?.email,

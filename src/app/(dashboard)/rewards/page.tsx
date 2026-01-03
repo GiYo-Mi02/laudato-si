@@ -29,7 +29,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -90,6 +91,7 @@ export default function RewardsPage() {
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [redeeming, setRedeeming] = useState(false);
   const [redeemSuccess, setRedeemSuccess] = useState<{ code: string; reward: Reward } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   /**
    * Fetch rewards and user points
@@ -132,11 +134,49 @@ export default function RewardsPage() {
       });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [session?.user?.email, toast]);
 
+  /**
+   * Manual refresh handler
+   */
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchData();
+    toast({
+      title: "Refreshed",
+      description: "Rewards list updated",
+    });
+  };
+
   useEffect(() => {
     fetchData();
+
+    // Set up real-time subscription for rewards updates
+    const channel = supabase
+      .channel('rewards-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'rewards',
+        },
+        async (payload) => {
+          console.log('Reward changed:', payload);
+          // Small delay before refetch to let database commit
+          await new Promise(resolve => setTimeout(resolve, 300));
+          // Refetch data when any reward changes
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchData]);
 
   /**
@@ -221,9 +261,21 @@ export default function RewardsPage() {
       <div className="space-y-2">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Rewards</h1>
-          <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-amber-500 text-white px-4 py-2 rounded-full w-fit">
-            <Coins className="w-4 h-4" />
-            <span className="font-bold">{userPoints.toLocaleString()}</span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+            <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-amber-500 text-white px-4 py-2 rounded-full">
+              <Coins className="w-4 h-4" />
+              <span className="font-bold">{userPoints.toLocaleString()}</span>
+            </div>
           </div>
         </div>
         <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
@@ -324,12 +376,20 @@ export default function RewardsPage() {
                         src={reward.image_url}
                         alt={reward.name}
                         className="w-full h-full object-cover"
+                        onLoad={() => {
+                          console.log('✅ Image loaded:', reward.name);
+                        }}
+                        onError={(e) => {
+                          console.error('❌ Image failed to load for', reward.name, ':', reward.image_url);
+                          // Fallback to icon if image fails to load
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
+                        }}
                       />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        {getCategoryIcon(reward.category)}
-                      </div>
-                    )}
+                    ) : null}
+                    <div className={`w-full h-full flex items-center justify-center ${reward.image_url ? 'fallback-icon hidden' : ''}`}>
+                      {getCategoryIcon(reward.category)}
+                    </div>
                     
                     {/* Low stock badge */}
                     {isLowStock && reward.remaining_quantity !== null && (
@@ -387,12 +447,16 @@ export default function RewardsPage() {
                     src={selectedReward.image_url}
                     alt={selectedReward.name}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback to icon if image fails to load
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
+                    }}
                   />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Gift className="w-12 h-12 text-green-600" />
-                  </div>
-                )}
+                ) : null}
+                <div className={`w-full h-full flex items-center justify-center ${selectedReward.image_url ? 'fallback-icon hidden' : ''}`}>
+                  <Gift className="w-12 h-12 text-green-600" />
+                </div>
               </div>
 
               {/* Details */}
