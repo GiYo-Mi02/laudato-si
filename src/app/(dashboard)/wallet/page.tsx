@@ -71,6 +71,16 @@ export default function WalletPage() {
   const [selectedRedemption, setSelectedRedemption] = useState<Redemption | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [qrData, setQrData] = useState<string | null>(null);
+  const [qrValue, setQrValue] = useState<string | null>(null);
+
+  const toBase64Url = (input: string) => {
+    // qrData is ASCII JSON today, but keep this UTF-8 safe.
+    const utf8 = encodeURIComponent(input).replace(/%([0-9A-F]{2})/g, (_, hex) =>
+      String.fromCharCode(parseInt(hex, 16))
+    );
+    const b64 = btoa(utf8);
+    return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  };
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
 
@@ -143,6 +153,7 @@ export default function WalletPage() {
   const openQRDialog = async (redemption: Redemption) => {
     setSelectedRedemption(redemption);
     setQrData(null);
+    setQrValue(null);
     setQrError(null);
     setQrLoading(true);
 
@@ -173,6 +184,21 @@ export default function WalletPage() {
       setQrLoading(false);
     }
   };
+
+  // Prefer encoding a URL so scanning can open /scan and auto-verify for staff.
+  useEffect(() => {
+    if (!qrData) {
+      setQrValue(null);
+      return;
+    }
+    if (typeof window === 'undefined') {
+      setQrValue(null);
+      return;
+    }
+    const baseUrl = window.location.origin;
+    const encoded = toBase64Url(qrData);
+    setQrValue(`${baseUrl}/scan?qr=${encoded}`);
+  }, [qrData]);
 
   /**
    * Copy redemption code to clipboard
@@ -469,7 +495,7 @@ export default function WalletPage() {
                 ) : qrData ? (
                   <div className="relative">
                     <QRCode
-                      value={qrData}
+                      value={qrValue || qrData}
                       size={192}
                       fgColor="#16a34a"
                       bgColor="#ffffff"

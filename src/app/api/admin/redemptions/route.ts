@@ -151,16 +151,63 @@ export async function POST(request: NextRequest) {
       const rawInput = String(qr_code).trim();
       let qrPayload = rawInput;
 
+      const decodeBase64UrlUtf8 = (value: string) => {
+        const b64 = value.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = b64 + '==='.slice((b64.length + 3) % 4);
+
+        try {
+          // Node runtime
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const anyGlobal = globalThis as any;
+          if (typeof anyGlobal.Buffer !== 'undefined') {
+            return anyGlobal.Buffer.from(padded, 'base64').toString('utf8') as string;
+          }
+        } catch {
+          // ignore
+        }
+
+        try {
+          // Edge/Web runtime
+          if (typeof atob !== 'undefined') {
+            const binary = atob(padded);
+            const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+            return new TextDecoder('utf-8').decode(bytes);
+          }
+        } catch {
+          // ignore
+        }
+
+        return null;
+      };
+
+      const maybeDecodeBase64UrlPayload = (value: string) => {
+        if (!/^[A-Za-z0-9_-]+$/.test(value)) return null;
+        if (value.startsWith('{') || value.startsWith('RDM-')) return null;
+
+        const decoded = decodeBase64UrlUtf8(value);
+        if (!decoded) return null;
+        const trimmed = decoded.trim();
+        // Only accept if it looks like our secure-QR JSON
+        if (trimmed.startsWith('{')) return trimmed;
+        return null;
+      };
+
       // If a QR encodes a URL (e.g. https://.../scan?qr=...), extract the actual payload.
       try {
-        const url = new URL(rawInput);
+        const url = rawInput.startsWith('http')
+          ? new URL(rawInput)
+          : new URL(rawInput, 'https://example.invalid');
         const embedded = url.searchParams.get('qr');
         if (embedded) {
-          qrPayload = decodeURIComponent(embedded);
+          const embeddedValue = embedded.trim();
+          qrPayload = maybeDecodeBase64UrlPayload(embeddedValue) || decodeURIComponent(embeddedValue);
         }
       } catch {
         // Not a URL, keep as-is
       }
+
+      // Support base64url-encoded payloads even when the scanner returns just the `qr` value.
+      qrPayload = maybeDecodeBase64UrlPayload(qrPayload) || qrPayload;
 
       const qrValidation = validateSecureQR(qrPayload);
 

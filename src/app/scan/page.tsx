@@ -8,13 +8,29 @@ import { useToast } from "@/components/ui/use-toast";
 
 type Status = "loading" | "success" | "error" | "expired" | "tampered";
 
+type RedemptionDetails = {
+  rewardName?: string;
+  userName?: string;
+  verifiedAt?: string;
+};
+
 function ScanContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const [status, setStatus] = useState<Status>("loading");
   const [message, setMessage] = useState("");
-  const [redemptionDetails, setRedemptionDetails] = useState<any>(null);
+  const [redemptionDetails, setRedemptionDetails] = useState<RedemptionDetails | null>(null);
+
+  const fromBase64Url = (input: string) => {
+    const b64 = input.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64 + "===".slice((b64.length + 3) % 4);
+    const binary = atob(padded);
+    const percent = Array.from(binary)
+      .map((c) => `%${c.charCodeAt(0).toString(16).padStart(2, "0")}`)
+      .join("");
+    return decodeURIComponent(percent);
+  };
 
   useEffect(() => {
     const verifyQR = async () => {
@@ -28,23 +44,40 @@ function ScanContent() {
       }
 
       try {
-        // Call verification API
-        const response = await fetch('/api/rewards/verify', {
+        // Support both raw QR JSON and compact base64url encoding.
+        let qrPayload = qrData;
+        try {
+          if (/^[A-Za-z0-9_-]+$/.test(qrData) && !qrData.startsWith("{") && !qrData.startsWith("RDM-")) {
+            const decoded = fromBase64Url(qrData);
+            if (decoded) qrPayload = decoded;
+          }
+        } catch {
+          // If decoding fails, treat as raw payload.
+        }
+
+        // Call admin verification API
+        const response = await fetch('/api/admin/redemptions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ qrData }),
+          body: JSON.stringify({ qr_code: qrPayload }),
         });
 
         const result = await response.json();
 
         if (response.ok && result.success) {
           setStatus("success");
-          setMessage(result.message);
-          setRedemptionDetails(result.redemption);
+          const successMessage = result.message || "Redemption verified successfully!";
+          setMessage(successMessage);
+          // Admin endpoint returns { reward, user, category, verified_at }
+          setRedemptionDetails({
+            rewardName: result.redemption?.reward,
+            userName: result.redemption?.user,
+            verifiedAt: result.redemption?.verified_at,
+          });
           
           toast({
             title: "Success!",
-            description: result.message,
+            description: successMessage,
           });
 
           // Redirect after 3 seconds
@@ -53,20 +86,22 @@ function ScanContent() {
           }, 3000);
         } else {
           // Handle different error types
-          if (result.expired) {
+          const msg = result.message || result.error || "Failed to verify QR code";
+
+          if (/expired/i.test(msg)) {
             setStatus("expired");
             setMessage("QR code has expired");
-          } else if (result.tampered) {
+          } else if (/tamper|signature|fake/i.test(msg)) {
             setStatus("tampered");
             setMessage("QR code appears to be tampered with");
           } else {
             setStatus("error");
-            setMessage(result.error || "Failed to verify QR code");
+            setMessage(msg);
           }
 
           toast({
             title: "Verification Failed",
-            description: result.error || "Invalid QR code",
+            description: msg,
             variant: "destructive",
           });
 
@@ -182,11 +217,10 @@ function ScanContent() {
             <div>
               <p className="text-sm text-muted-foreground">User</p>
               <p className="font-semibold text-[#2C2C2C]">{redemptionDetails.userName}</p>
-              <p className="text-xs text-muted-foreground">{redemptionDetails.userEmail}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Points Cost</p>
-              <p className="font-semibold text-[#4A6B5C]">{redemptionDetails.pointsCost} points</p>
+              <p className="text-sm text-muted-foreground">Verified At</p>
+              <p className="font-semibold text-[#4A6B5C]">{redemptionDetails.verifiedAt}</p>
             </div>
           </div>
         </motion.div>
