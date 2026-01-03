@@ -5,7 +5,7 @@
  * 
  * This page allows admins with 'manage_rewards' permission to:
  * - View all rewards in the system
- * - Create new rewards with images and categories
+ * - Create new rewards with images (upload or URL)
  * - Edit existing rewards (name, description, cost, stock, category)
  * - Activate/deactivate rewards
  * - Delete rewards
@@ -31,10 +31,12 @@ import {
   DollarSign,
   Tag,
   ImageIcon,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Reward, RewardCategory } from "@/types";
+import ImageUpload from "@/components/admin/ImageUpload";
 
 // Available reward categories
 const CATEGORIES: { value: RewardCategory; label: string }[] = [
@@ -531,11 +533,32 @@ export default function AdminRewardsPage() {
                 
                 {/* Image URL */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Image URL</label>
-                  <Input
+                  <label className="block text-sm font-medium mb-1">Reward Image</label>
+                  <ImageUpload
                     value={formData.image_url}
-                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                    placeholder="https://example.com/image.jpg"
+                    onChange={(url) => setFormData({ ...formData, image_url: url })}
+                    onUpload={async (file) => {
+                      // Upload to Supabase Storage or convert to base64
+                      const formDataUpload = new FormData();
+                      formDataUpload.append('file', file);
+                      
+                      const response = await fetch('/api/admin/upload', {
+                        method: 'POST',
+                        body: formDataUpload,
+                      });
+                      
+                      if (!response.ok) {
+                        // Fallback to base64 if upload endpoint doesn't exist
+                        return new Promise<string>((resolve) => {
+                          const reader = new FileReader();
+                          reader.onloadend = () => resolve(reader.result as string);
+                          reader.readAsDataURL(file);
+                        });
+                      }
+                      
+                      const data = await response.json();
+                      return data.url;
+                    }}
                   />
                 </div>
                 

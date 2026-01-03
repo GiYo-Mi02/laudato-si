@@ -182,6 +182,8 @@ export async function PATCH(request: NextRequest) {
         updateData = { 
           is_banned: !targetUser.is_banned,
           ban_reason: !targetUser.is_banned ? (reason || 'No reason provided') : null,
+          banned_by: !targetUser.is_banned ? adminCheck.user.id : null,
+          banned_at: !targetUser.is_banned ? new Date().toISOString() : null,
         };
         auditAction = targetUser.is_banned ? 'user_unbanned' : 'user_banned';
         oldValues = { is_banned: targetUser.is_banned };
@@ -210,6 +212,7 @@ export async function PATCH(request: NextRequest) {
             amount: pointsChange,
             transaction_type: 'admin_adjustment',
             description: reason || 'Admin adjustment',
+            admin_id: adminCheck.user.id,
           });
         break;
 

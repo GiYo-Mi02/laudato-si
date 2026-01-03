@@ -2,18 +2,20 @@
 
 /**
  * ============================================================================
- * DASHBOARD LAYOUT - Responsive Design
+ * DASHBOARD LAYOUT - Responsive Design with Ban Check
  * ============================================================================
  * Responsive PWA layout that works across all devices:
  * - Mobile: Bottom navigation bar
  * - Tablet/Desktop: Side navigation or centered content
  * Theme: Laudato Si (Green, Earth tones, clean, hopeful)
+ * 
+ * Now includes ban status check to redirect banned users.
  * ============================================================================
  */
 
 import { useSession } from 'next-auth/react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Home, Gift, Trophy, User, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -36,6 +38,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const router = useRouter();
+  const [isBanned, setIsBanned] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -43,6 +46,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       router.push('/');
     }
   }, [status, router]);
+
+  // Check if user is banned
+  useEffect(() => {
+    const checkBanStatus = async () => {
+      if (!session?.user?.email) return;
+
+      try {
+        const response = await fetch('/api/auth/check-ban');
+        const data = await response.json();
+
+        if (data.success && data.banInfo?.is_banned) {
+          setIsBanned(true);
+          router.push('/banned');
+        }
+      } catch (error) {
+        console.error('Failed to check ban status:', error);
+      }
+    };
+
+    if (status === 'authenticated') {
+      checkBanStatus();
+    }
+  }, [session, status, router]);
 
   // Show loading while checking auth
   if (status === 'loading') {
@@ -58,6 +84,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Don't render if not authenticated
   if (!session) {
+    return null;
+  }
+
+  // Don't render if user is banned (redirect will happen)
+  if (isBanned) {
     return null;
   }
 

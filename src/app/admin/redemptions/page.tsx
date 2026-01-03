@@ -6,11 +6,12 @@
  * ============================================================================
  * Interface for Canteen Admin to verify reward redemptions via QR code.
  * Also allows manual lookup by redemption ID.
+ * Now includes camera-based QR scanning!
  * ============================================================================
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { QrCode, Search, CheckCircle2, XCircle, Clock, Gift } from 'lucide-react';
+import { QrCode, Search, CheckCircle2, XCircle, Clock, Gift, Camera, CameraOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import QRScanner from '@/components/admin/QRScanner';
 
 interface Redemption {
   id: string;
@@ -57,6 +59,7 @@ export default function AdminRedemptionsPage() {
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('pending');
+  const [showScanner, setShowScanner] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Fetch redemptions list
@@ -90,6 +93,7 @@ export default function AdminRedemptionsPage() {
     if (!codeOrId.trim()) return;
 
     setVerifying(true);
+    setShowScanner(false); // Close scanner after scan
     try {
       const response = await fetch('/api/admin/redemptions', {
         method: 'POST',
@@ -124,6 +128,11 @@ export default function AdminRedemptionsPage() {
       setVerifying(false);
       inputRef.current?.focus();
     }
+  };
+
+  // Handle QR scan result
+  const handleQRScan = (data: string) => {
+    handleVerify(data);
   };
 
   // Handle Enter key for manual input
@@ -172,15 +181,47 @@ export default function AdminRedemptionsPage() {
       {/* Scanner Section */}
       <Card className="border-2 border-dashed border-green-300 dark:border-green-700">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <QrCode className="w-6 h-6 text-green-600" />
-            QR Code Scanner
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <QrCode className="w-6 h-6 text-green-600" />
+              QR Code Scanner
+            </div>
+            <Button
+              variant={showScanner ? "destructive" : "default"}
+              size="sm"
+              onClick={() => setShowScanner(!showScanner)}
+              className="gap-2"
+            >
+              {showScanner ? (
+                <>
+                  <CameraOff className="w-4 h-4" />
+                  Close Camera
+                </>
+              ) : (
+                <>
+                  <Camera className="w-4 h-4" />
+                  Open Camera
+                </>
+              )}
+            </Button>
           </CardTitle>
           <CardDescription>
-            Scan a QR code or enter the code manually below
+            Scan a QR code using your camera or enter the code manually below
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Camera QR Scanner */}
+          {showScanner && (
+            <div className="mb-6">
+              <QRScanner
+                onScan={handleQRScan}
+                onClose={() => setShowScanner(false)}
+                isOpen={showScanner}
+              />
+            </div>
+          )}
+
+          {/* Manual Input */}
           <div className="flex gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
