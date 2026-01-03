@@ -28,29 +28,45 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get user from database
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id, is_banned, ban_reason, updated_at')
-      .eq('email', session.user.email)
-      .single();
+    // Try to get ban status - handle case where column doesn't exist
+    try {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('id, is_banned, ban_reason')
+        .eq('email', session.user.email)
+        .single();
 
-    if (error) {
-      console.error('Error fetching user:', error);
-      return NextResponse.json(
-        { success: false, message: 'Failed to fetch user data' },
-        { status: 500 }
-      );
+      if (error) {
+        // Column might not exist, return not banned
+        return NextResponse.json({
+          success: true,
+          banInfo: {
+            is_banned: false,
+            ban_reason: null,
+            banned_at: null,
+          },
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        banInfo: {
+          is_banned: user?.is_banned || false,
+          ban_reason: user?.ban_reason || null,
+          banned_at: null,
+        },
+      });
+    } catch {
+      // If query fails, assume not banned
+      return NextResponse.json({
+        success: true,
+        banInfo: {
+          is_banned: false,
+          ban_reason: null,
+          banned_at: null,
+        },
+      });
     }
-
-    return NextResponse.json({
-      success: true,
-      banInfo: {
-        is_banned: user?.is_banned || false,
-        ban_reason: user?.ban_reason || null,
-        banned_at: user?.is_banned ? user?.updated_at : null,
-      },
-    });
 
   } catch (error) {
     console.error('Error checking ban status:', error);

@@ -542,22 +542,33 @@ export default function AdminRewardsPage() {
                       const formDataUpload = new FormData();
                       formDataUpload.append('file', file);
                       
-                      const response = await fetch('/api/admin/upload', {
-                        method: 'POST',
-                        body: formDataUpload,
-                      });
-                      
-                      if (!response.ok) {
-                        // Fallback to base64 if upload endpoint doesn't exist
+                      try {
+                        const response = await fetch('/api/admin/upload', {
+                          method: 'POST',
+                          body: formDataUpload,
+                        });
+                        
+                        const text = await response.text();
+                        
+                        if (!response.ok || !text) {
+                          // Fallback to base64 if upload fails
+                          return new Promise<string>((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result as string);
+                            reader.readAsDataURL(file);
+                          });
+                        }
+                        
+                        const data = JSON.parse(text);
+                        return data.url;
+                      } catch (error) {
+                        // Fallback to base64 on any error
                         return new Promise<string>((resolve) => {
                           const reader = new FileReader();
                           reader.onloadend = () => resolve(reader.result as string);
                           reader.readAsDataURL(file);
                         });
                       }
-                      
-                      const data = await response.json();
-                      return data.url;
                     }}
                   />
                 </div>

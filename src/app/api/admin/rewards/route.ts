@@ -176,10 +176,18 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * PATCH /api/admin/rewards
+ * PUT/PATCH /api/admin/rewards
  * Update an existing reward.
  */
+export async function PUT(request: NextRequest) {
+  return handleUpdate(request);
+}
+
 export async function PATCH(request: NextRequest) {
+  return handleUpdate(request);
+}
+
+async function handleUpdate(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions) as Session | null;
     const adminCheck = await validateAdminSession(session?.user?.email);
@@ -199,7 +207,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, ...updateFields } = body;
+    const { id, point_cost, stock_quantity, ...otherFields } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -220,6 +228,16 @@ export async function PATCH(request: NextRequest) {
         { success: false, message: 'Reward not found' },
         { status: 404 }
       );
+    }
+
+    // Map frontend field names to database field names
+    const updateFields: Record<string, any> = { ...otherFields };
+    if (point_cost !== undefined) {
+      updateFields.cost = point_cost;
+    }
+    if (stock_quantity !== undefined) {
+      updateFields.total_quantity = stock_quantity;
+      updateFields.remaining_quantity = stock_quantity;
     }
 
     // Update reward
@@ -244,7 +262,10 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Reward updated successfully',
-      reward,
+      reward: {
+        ...reward,
+        point_cost: reward.cost, // Map back for frontend
+      },
     });
 
   } catch (error) {

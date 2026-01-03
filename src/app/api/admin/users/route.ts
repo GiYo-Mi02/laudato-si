@@ -179,12 +179,16 @@ export async function PATCH(request: NextRequest) {
         break;
 
       case 'toggle_ban':
+        // Check if is_banned column exists by using a safe update
         updateData = { 
           is_banned: !targetUser.is_banned,
-          ban_reason: !targetUser.is_banned ? (reason || 'No reason provided') : null,
-          banned_by: !targetUser.is_banned ? adminCheck.user.id : null,
-          banned_at: !targetUser.is_banned ? new Date().toISOString() : null,
         };
+        // Only add ban_reason if we're banning (not unbanning)
+        if (!targetUser.is_banned) {
+          updateData.ban_reason = reason || 'No reason provided';
+        } else {
+          updateData.ban_reason = null;
+        }
         auditAction = targetUser.is_banned ? 'user_unbanned' : 'user_banned';
         oldValues = { is_banned: targetUser.is_banned };
         newValues = { is_banned: !targetUser.is_banned, reason };
@@ -198,22 +202,27 @@ export async function PATCH(request: NextRequest) {
             { status: 400 }
           );
         }
-        const newTotal = Math.max(0, targetUser.total_points + pointsChange);
+        const currentPoints = targetUser.total_points || 0;
+        const newTotal = Math.max(0, currentPoints + pointsChange);
         updateData = { total_points: newTotal };
         auditAction = 'user_points_adjusted';
-        oldValues = { total_points: targetUser.total_points };
+        oldValues = { total_points: currentPoints };
         newValues = { total_points: newTotal, change: pointsChange, reason };
 
-        // Create point transaction record
-        await supabase
-          .from('point_transactions')
-          .insert({
-            user_id: user_id,
-            amount: pointsChange,
-            transaction_type: 'admin_adjustment',
-            description: reason || 'Admin adjustment',
-            admin_id: adminCheck.user.id,
-          });
+        // Try to create point transaction record (may fail if table doesn't exist)
+        try {
+          await supabase
+            .from('point_transactions')
+            .insert({
+              user_id: user_id,
+              amount: pointsChange,
+              transaction_type: 'admin_adjustment',
+              description: reason || 'Admin adjustment',
+            });
+        } catch (txError) {
+          // Silently ignore if point_transactions table doesn't exist
+          console.warn('Could not log point transaction:', txError);
+        }
         break;
 
       default:

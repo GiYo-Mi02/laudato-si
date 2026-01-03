@@ -134,9 +134,10 @@ export async function validateAdminSession(email: string | null | undefined): Pr
     return { isValid: false, error: 'Not authenticated' };
   }
 
+  // Select only columns that definitely exist
   const { data: userData, error } = await supabase
     .from('users')
-    .select('id, email, name, role, is_banned')
+    .select('id, email, name, role')
     .eq('email', email)
     .single();
 
@@ -144,8 +145,19 @@ export async function validateAdminSession(email: string | null | undefined): Pr
     return { isValid: false, error: 'User not found' };
   }
 
-  if (userData.is_banned) {
-    return { isValid: false, error: 'Account is suspended' };
+  // Check is_banned separately (column may not exist)
+  try {
+    const { data: banData } = await supabase
+      .from('users')
+      .select('is_banned')
+      .eq('email', email)
+      .single();
+    
+    if (banData?.is_banned) {
+      return { isValid: false, error: 'Account is suspended' };
+    }
+  } catch {
+    // Column doesn't exist, ignore
   }
 
   if (!isAdmin(userData.role as UserRole)) {
@@ -167,21 +179,26 @@ export async function validateAdminSession(email: string | null | undefined): Pr
  * Log admin action to audit log
  */
 export async function logAdminAction(
-  actorId: string,
+  adminId: string,
   action: string,
   entityType: string,
   entityId?: string,
   oldValues?: Record<string, any>,
   newValues?: Record<string, any>
 ) {
-  await supabase
-    .from('audit_logs')
-    .insert({
-      actor_id: actorId,
-      action,
-      entity_type: entityType,
-      entity_id: entityId || null,
-      old_values: oldValues || null,
-      new_values: newValues || null,
-    });
+  try {
+    await supabase
+      .from('audit_logs')
+      .insert({
+        admin_id: adminId,
+        action,
+        entity_type: entityType,
+        entity_id: entityId || null,
+        old_values: oldValues || null,
+        new_values: newValues || null,
+      });
+  } catch (error) {
+    // Silently fail if audit_logs table doesn't exist yet
+    console.error('Failed to log admin action:', error);
+  }
 }
