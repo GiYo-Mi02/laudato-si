@@ -233,7 +233,7 @@ export default function AdminGCashPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
             <Banknote className="w-7 h-7 text-green-500" />
             GCash Verification
             {pendingCount > 0 && (
@@ -263,7 +263,7 @@ export default function AdminGCashPage() {
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value as "all" | "pending" | "verified" | "rejected")}
-          className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+          className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
         >
           <option value="all">All Status</option>
           <option value="pending">Pending</option>
@@ -308,16 +308,16 @@ export default function AdminGCashPage() {
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredDonations.map((donation) => (
                   <tr key={donation.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
-                    <td className="px-4 py-3 text-sm">
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
                       {formatDate(donation.created_at)}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-medium">{donation.donor_name || "Anonymous"}</div>
+                      <div className="font-medium text-gray-900 dark:text-white">{donation.donor_name || "Anonymous"}</div>
                       {donation.donor_email && (
-                        <div className="text-sm text-gray-500">{donation.donor_email}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{donation.donor_email}</div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm">
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
                       {donation.campaign?.title || "—"}
                     </td>
                     <td className="px-4 py-3">
@@ -408,7 +408,7 @@ export default function AdminGCashPage() {
               className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md"
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold">Donation Details</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Donation Details</h2>
                 <button
                   onClick={() => !verifying && setSelectedDonation(null)}
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -423,8 +423,8 @@ export default function AdminGCashPage() {
                 <div className="flex items-center gap-3">
                   <User className="w-5 h-5 text-gray-400" />
                   <div>
-                    <p className="font-medium">{selectedDonation.donor_name || "Anonymous"}</p>
-                    <p className="text-sm text-gray-500">{selectedDonation.donor_email || "No email"}</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{selectedDonation.donor_name || "Anonymous"}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{selectedDonation.donor_email || "No email"}</p>
                   </div>
                 </div>
                 
@@ -453,8 +453,8 @@ export default function AdminGCashPage() {
                 <div className="flex items-center gap-3">
                   <Calendar className="w-5 h-5 text-gray-400" />
                   <div>
-                    <p className="font-medium">{formatDate(selectedDonation.created_at)}</p>
-                    <p className="text-sm text-gray-500">Submitted</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{formatDate(selectedDonation.created_at)}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Submitted</p>
                   </div>
                 </div>
                 
@@ -486,7 +486,7 @@ export default function AdminGCashPage() {
                 <div className="mt-6 space-y-4">
                   {/* Rejection reason input */}
                   <div>
-                    <label className="block text-sm font-medium mb-1">
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">
                       Rejection Reason (if rejecting)
                     </label>
                     <Input

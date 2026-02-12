@@ -289,7 +289,7 @@ export default function AdminDonationsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
             <Heart className="w-7 h-7 text-pink-500" />
             Donation Campaigns
           </h1>
@@ -319,7 +319,7 @@ export default function AdminDonationsPage() {
         <select
           value={filterActive}
           onChange={(e) => setFilterActive(e.target.value as "all" | "active" | "ended")}
-          className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+          className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
         >
           <option value="all">All Campaigns</option>
           <option value="active">Active</option>
@@ -375,7 +375,7 @@ export default function AdminDonationsPage() {
               {/* Content */}
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-lg">{campaign.title}</h3>
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{campaign.title}</h3>
                   {getStatusBadge(campaign)}
                 </div>
                 
@@ -390,7 +390,7 @@ export default function AdminDonationsPage() {
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600 dark:text-gray-400">Progress</span>
-                      <span className="font-medium">
+                      <span className="font-medium text-gray-900 dark:text-white">
                         {campaign.current_amount.toLocaleString()} / {campaign.goal_amount.toLocaleString()} pts
                       </span>
                     </div>
@@ -468,7 +468,7 @@ export default function AdminDonationsPage() {
               className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                   {editingCampaign ? "Edit Campaign" : "Create Campaign"}
                 </h2>
                 <button
@@ -483,7 +483,7 @@ export default function AdminDonationsPage() {
               <div className="space-y-4">
                 {/* Title */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Title *</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Title *</label>
                   <Input
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -493,19 +493,19 @@ export default function AdminDonationsPage() {
                 
                 {/* Description */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Description</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Campaign description"
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                     rows={3}
                   />
                 </div>
                 
                 {/* Goal Amount */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Goal Amount (points)</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Goal Amount (points)</label>
                   <Input
                     type="number"
                     min={0}
@@ -516,7 +516,7 @@ export default function AdminDonationsPage() {
                 
                 {/* Image URL */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Image URL</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Image URL</label>
                   <Input
                     value={formData.image_url}
                     onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
@@ -526,7 +526,7 @@ export default function AdminDonationsPage() {
                 
                 {/* End Date */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">End Date</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">End Date</label>
                   <Input
                     type="date"
                     value={formData.ends_at}
@@ -543,7 +543,7 @@ export default function AdminDonationsPage() {
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                     className="w-4 h-4 rounded border-gray-300"
                   />
-                  <label htmlFor="is_active" className="text-sm font-medium">
+                  <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-200">
                     Active (visible to users)
                   </label>
                 </div>
@@ -599,7 +599,7 @@ export default function AdminDonationsPage() {
             >
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-xl font-bold">{viewingCampaign.title}</h2>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{viewingCampaign.title}</h2>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Donations received
                   </p>
@@ -619,7 +619,7 @@ export default function AdminDonationsPage() {
                     <Coins className="w-5 h-5" />
                     <span className="text-sm">Point Donations</span>
                   </div>
-                  <p className="text-2xl font-bold mt-1">
+                  <p className="text-2xl font-bold mt-1 text-gray-900 dark:text-white">
                     {viewingCampaign.current_amount.toLocaleString()} pts
                   </p>
                 </div>
@@ -628,7 +628,7 @@ export default function AdminDonationsPage() {
                     <DollarSign className="w-5 h-5" />
                     <span className="text-sm">GCash Donations</span>
                   </div>
-                  <p className="text-2xl font-bold mt-1">
+                  <p className="text-2xl font-bold mt-1 text-gray-900 dark:text-white">
                     ₱{(viewingCampaign as any).gcash_total?.toLocaleString() || 0}
                   </p>
                 </div>
@@ -647,7 +647,7 @@ export default function AdminDonationsPage() {
                       className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg"
                     >
                       <div>
-                        <p className="font-medium">{donation.user?.name || "Anonymous"}</p>
+                        <p className="font-medium text-gray-900 dark:text-white">{donation.user?.name || "Anonymous"}</p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                           {new Date(donation.created_at).toLocaleString()}
                         </p>

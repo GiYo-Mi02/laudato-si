@@ -57,18 +57,10 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 200);
     const offset = (page - 1) * limit;
 
-    // Build query with actor user info
+    // Build query (no FK join - fetch actor info separately)
     let query = supabase
       .from('audit_logs')
-      .select(`
-        *,
-        actor:users!audit_logs_actor_id_fkey (
-          id,
-          name,
-          email,
-          role
-        )
-      `, { count: 'exact' });
+      .select('*', { count: 'exact' });
 
     // Apply filters
     if (action) {
@@ -94,35 +86,36 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    // Get distinct action types for filter dropdown
-    const { data: actionTypes } = await supabase
-      .from('audit_logs')
-      .select('action')
-      .limit(100);
+    // Fetch actor (admin) info separately for each unique actor_id
+    const actorIds = [...new Set((logs || []).map(l => l.actor_id).filter(Boolean))];
+    let actorsMap: Record<string, { id: string; name: string; email: string; role: string }> = {};
 
-    const uniqueActions = Array.from(new Set(actionTypes?.map(a => a.action) || []));
+    if (actorIds.length > 0) {
+      const { data: actors } = await supabase
+        .from('users')
+        .select('id, name, email, role')
+        .in('id', actorIds);
 
-    // Get distinct entity types for filter dropdown
-    const { data: entityTypes } = await supabase
-      .from('audit_logs')
-      .select('entity_type')
-      .limit(100);
+      if (actors) {
+        actorsMap = Object.fromEntries(actors.map(a => [a.id, a]));
+      }
+    }
 
-    const uniqueEntities = Array.from(new Set(entityTypes?.map(e => e.entity_type) || []));
+    // Attach actor info to each log
+    const logsWithActors = (logs || []).map(log => ({
+      ...log,
+      admin_email: log.actor_id ? actorsMap[log.actor_id]?.email || null : null,
+      admin: log.actor_id ? actorsMap[log.actor_id] || null : null,
+    }));
+
+    const total = count || 0;
+    const totalPages = Math.ceil(total / limit);
 
     return NextResponse.json({
       success: true,
-      logs: logs || [],
-      filters: {
-        actions: uniqueActions,
-        entityTypes: uniqueEntities,
-      },
-      pagination: {
-        page,
-        limit,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit),
-      },
+      logs: logsWithActors,
+      total,
+      totalPages,
     });
 
   } catch (error) {

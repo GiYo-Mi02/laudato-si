@@ -150,10 +150,10 @@ export default function AdminRedemptionsPage() {
 
   // Status badge colors
   const statusColors: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-700',
-    verified: 'bg-green-100 text-green-700',
-    expired: 'bg-gray-100 text-gray-700',
-    cancelled: 'bg-red-100 text-red-700',
+    pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+    verified: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    expired: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   };
 
   const statusIcons: Record<string, React.ReactNode> = {
@@ -179,7 +179,7 @@ export default function AdminRedemptionsPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           Reward Verification
         </h1>
-        <p className="text-gray-500">
+        <p className="text-gray-500 dark:text-gray-400">
           Scan QR codes or enter codes manually to verify reward redemptions
         </p>
       </div>
@@ -369,7 +369,7 @@ export default function AdminRedemptionsPage() {
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium text-sm">
+                              <p className="font-medium text-sm text-gray-900 dark:text-white">
                                 {redemption.user?.name || 'Unknown'}
                               </p>
                               <p className="text-xs text-gray-500">
@@ -380,7 +380,7 @@ export default function AdminRedemptionsPage() {
                         </TableCell>
                         <TableCell>
                           <div>
-                            <p className="font-medium">
+                            <p className="font-medium text-gray-900 dark:text-white">
                               {redemption.reward?.name}
                             </p>
                             <p className="text-xs text-gray-500 capitalize">
@@ -388,10 +388,10 @@ export default function AdminRedemptionsPage() {
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-gray-900 dark:text-gray-100">
                           {redemption.points_spent || redemption.reward?.point_cost} pts
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-gray-900 dark:text-gray-100">
                           {formatDate(redemption.created_at)}
                         </TableCell>
                         <TableCell>

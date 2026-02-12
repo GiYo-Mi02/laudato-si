@@ -106,7 +106,7 @@ export default function AdminDashboardPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           Dashboard
         </h1>
-        <p className="text-gray-500">
+        <p className="text-gray-500 dark:text-gray-400">
           Overview of the Laudato Si&apos; Eco-Pledge platform
         </p>
       </div>
@@ -167,7 +167,7 @@ export default function AdminDashboardPage() {
               <div className="space-y-4">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Total Users</span>
-                  <span className="font-semibold">{stats.users.total}</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{stats.users.total}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">New This Week</span>
@@ -177,13 +177,13 @@ export default function AdminDashboardPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Active Today</span>
-                  <span className="font-semibold">{stats.users.activeToday}</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{stats.users.activeToday}</span>
                 </div>
                 <hr className="dark:border-gray-700" />
                 <div className="space-y-2">
                   <p className="text-sm text-gray-500">By Role</p>
                   {Object.entries(stats.users.byRole).map(([role, count]) => (
-                    <div key={role} className="flex justify-between text-sm">
+                    <div key={role} className="flex justify-between text-sm text-gray-700 dark:text-gray-300">
                       <span className="capitalize">{role.replace('_', ' ')}</span>
                       <span>{count}</span>
                     </div>
@@ -213,7 +213,7 @@ export default function AdminDashboardPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Average Streak</span>
-                  <span className="font-semibold">
+                  <span className="font-semibold text-gray-900 dark:text-white">
                     {stats.points.averageStreak} days
                   </span>
                 </div>
@@ -235,17 +235,17 @@ export default function AdminDashboardPage() {
               <div className="space-y-4">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Active Campaigns</span>
-                  <span className="font-semibold">{stats.donations.activeCampaigns}</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{stats.donations.activeCampaigns}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Points Donated</span>
-                  <span className="font-semibold">
+                  <span className="font-semibold text-gray-900 dark:text-white">
                     {stats.donations.totalPointsDonated.toLocaleString()} pts
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">GCash Verified</span>
-                  <span className="font-semibold">
+                  <span className="font-semibold text-gray-900 dark:text-white">
                     ₱{stats.donations.totalGcashVerified.toLocaleString()}
                   </span>
                 </div>
@@ -282,7 +282,7 @@ export default function AdminDashboardPage() {
                   key={item.id}
                   className="flex justify-between items-center p-2 bg-orange-50 dark:bg-orange-900/20 rounded"
                 >
-                  <span className="font-medium">{item.name}</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{item.name}</span>
                   <span className="text-orange-600 font-semibold">
                     {item.stock_quantity} left
                   </span>
@@ -315,7 +315,7 @@ function StatCard({ title, value, icon, description, trend, highlight }: StatCar
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-500">{title}</p>
-            <p className={`text-2xl font-bold mt-1 ${highlight ? 'text-orange-600' : ''}`}>
+            <p className={`text-2xl font-bold mt-1 ${highlight ? 'text-orange-600' : 'text-gray-900 dark:text-white'}`}>
               {value}
             </p>
             {description && (

@@ -212,15 +212,15 @@ function ScanContent() {
           <div className="space-y-3">
             <div>
               <p className="text-sm text-muted-foreground">Reward</p>
-              <p className="font-semibold text-[#2C2C2C]">{redemptionDetails.rewardName}</p>
+              <p className="font-semibold text-[#2C2C2C] dark:text-gray-100">{redemptionDetails.rewardName}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">User</p>
-              <p className="font-semibold text-[#2C2C2C]">{redemptionDetails.userName}</p>
+              <p className="font-semibold text-[#2C2C2C] dark:text-gray-100">{redemptionDetails.userName}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Verified At</p>
-              <p className="font-semibold text-[#4A6B5C]">{redemptionDetails.verifiedAt}</p>
+              <p className="font-semibold text-[#4A6B5C] dark:text-green-400">{redemptionDetails.verifiedAt}</p>
             </div>
           </div>
         </motion.div>

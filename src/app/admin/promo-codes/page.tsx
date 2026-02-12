@@ -345,7 +345,7 @@ export default function AdminPromoCodesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
             <Ticket className="w-7 h-7 text-orange-500" />
             Promo Codes Management
           </h1>
@@ -375,7 +375,7 @@ export default function AdminPromoCodesPage() {
         <select
           value={filterActive}
           onChange={(e) => setFilterActive(e.target.value as "all" | "active" | "inactive" | "expired")}
-          className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+          className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
         >
           <option value="all">All Status</option>
           <option value="active">Active</option>
@@ -442,7 +442,7 @@ export default function AdminPromoCodesPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 text-sm">
+                      <div className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
                         <Users className="w-4 h-4 text-gray-400" />
                         <span>{promo.times_used}</span>
                         {promo.max_uses && (
@@ -451,7 +451,7 @@ export default function AdminPromoCodesPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 text-gray-700 dark:text-gray-300">
                         <Calendar className="w-4 h-4 text-gray-400" />
                         <span>
                           {formatDate(promo.valid_from)} - {formatDate(promo.valid_until)}
@@ -522,7 +522,7 @@ export default function AdminPromoCodesPage() {
               className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                   {editingCode ? "Edit Promo Code" : "Create Promo Code"}
                 </h2>
                 <button
@@ -537,7 +537,7 @@ export default function AdminPromoCodesPage() {
               <div className="space-y-4">
                 {/* Code */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Code *</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Code *</label>
                   <div className="flex gap-2">
                     <Input
                       value={formData.code}
@@ -556,7 +556,7 @@ export default function AdminPromoCodesPage() {
                 
                 {/* Description */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Description</label>
                   <Input
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -566,7 +566,7 @@ export default function AdminPromoCodesPage() {
                 
                 {/* Point Value */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Point Value *</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Point Value *</label>
                   <Input
                     type="number"
                     min={1}
@@ -577,19 +577,19 @@ export default function AdminPromoCodesPage() {
                 
                 {/* Max Uses */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Max Uses</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Max Uses</label>
                   <Input
                     type="number"
                     min={0}
                     value={formData.max_uses}
                     onChange={(e) => setFormData({ ...formData, max_uses: parseInt(e.target.value) || 0 })}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Set to 0 for unlimited</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Set to 0 for unlimited</p>
                 </div>
                 
                 {/* Valid From */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Valid From</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Valid From</label>
                   <Input
                     type="date"
                     value={formData.valid_from}
@@ -599,7 +599,7 @@ export default function AdminPromoCodesPage() {
                 
                 {/* Valid Until */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Valid Until</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Valid Until</label>
                   <Input
                     type="date"
                     value={formData.valid_until}
@@ -616,7 +616,7 @@ export default function AdminPromoCodesPage() {
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                     className="w-4 h-4 rounded border-gray-300"
                   />
-                  <label htmlFor="is_active" className="text-sm font-medium">
+                  <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-200">
                     Active (can be redeemed)
                   </label>
                 </div>

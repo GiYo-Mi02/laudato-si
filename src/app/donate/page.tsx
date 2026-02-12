@@ -319,7 +319,7 @@ export default function DonationsPage() {
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span className="text-gray-500">Progress</span>
-                        <span className="font-medium">
+                        <span className="font-medium text-gray-900 dark:text-white">
                           {campaign.stats.totalPoints.toLocaleString()} / {campaign.goal_points.toLocaleString()} pts
                         </span>
                       </div>
@@ -503,7 +503,7 @@ export default function DonationsPage() {
               {/* GCash Number Display */}
               <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
                 <p className="text-sm text-gray-500 mb-1">Send GCash to:</p>
-                <p className="text-2xl font-bold text-blue-600">
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                   {gcashDialog.campaign?.gcash_number || '0917-XXX-XXXX'}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">

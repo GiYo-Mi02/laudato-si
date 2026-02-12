@@ -444,7 +444,7 @@ export default function WalletPage() {
                             </span>
                           </div>
                         </div>
-                        <span className="text-sm font-medium text-gray-500">
+                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
                           -{redemption.points_spent} pts
                         </span>
                       </div>

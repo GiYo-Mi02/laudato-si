@@ -156,7 +156,7 @@ export default function PointsDisplay({
         {/* Streak */}
         <div className="flex items-center gap-1">
           <Flame className="w-5 h-5 text-orange-500" />
-          <span className="font-medium text-orange-600">
+          <span className="font-medium text-orange-600 dark:text-orange-400">
             {stats?.current_streak || 0}
           </span>
         </div>
@@ -196,7 +196,7 @@ export default function PointsDisplay({
           {/* Current Streak */}
           <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
             <Flame className="w-6 h-6 text-orange-500 mx-auto" />
-            <p className="text-2xl font-bold text-orange-600 mt-1">
+            <p className="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-1">
               {stats?.current_streak || 0}
             </p>
             <p className="text-xs text-gray-500">Day Streak</p>
@@ -205,7 +205,7 @@ export default function PointsDisplay({
           {/* Total Pledges */}
           <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
             <TrendingUp className="w-6 h-6 text-blue-500 mx-auto" />
-            <p className="text-2xl font-bold text-blue-600 mt-1">
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
               {stats?.total_contributions || 0}
             </p>
             <p className="text-xs text-gray-500">Pledges</p>
@@ -214,7 +214,7 @@ export default function PointsDisplay({
           {/* Best Streak */}
           <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
             <Sparkles className="w-6 h-6 text-purple-500 mx-auto" />
-            <p className="text-2xl font-bold text-purple-600 mt-1">
+            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">
               {stats?.longest_streak || 0}
             </p>
             <p className="text-xs text-gray-500">Best Streak</p>
@@ -228,7 +228,7 @@ export default function PointsDisplay({
               Make a pledge today to start your streak! 🌱
             </p>
           ) : stats?.current_streak && stats.current_streak >= 5 ? (
-            <p className="text-green-600 font-medium">
+            <p className="text-green-600 dark:text-green-400 font-medium">
               🔥 You&apos;re on fire! Max streak bonus active (+5 pts per pledge)
             </p>
           ) : (

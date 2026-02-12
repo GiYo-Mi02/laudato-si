@@ -12,7 +12,7 @@
     --chartreuse: 78 70% 66%;
     --terracotta: 28 50% 64%;
     --charcoal: 0 0% 17%;
-    
+
     --background: 40 33% 96%;
     --foreground: 0 0% 17%;
     --card: 40 33% 98%;
@@ -33,6 +33,28 @@
     --input: 40 20% 85%;
     --ring: 150 20% 36%;
     --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222 14% 10%;
+    --foreground: 0 0% 95%;
+    --card: 222 13% 13%;
+    --card-foreground: 0 0% 95%;
+    --popover: 222 13% 13%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 150 20% 46%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 222 14% 18%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 222 14% 18%;
+    --muted-foreground: 220 9% 60%;
+    --accent: 78 70% 56%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 13% 20%;
+    --input: 222 13% 20%;
+    --ring: 150 20% 46%;
   }
 }
 

@@ -465,7 +465,7 @@ export default function RewardsPage() {
                   <span className="text-sm text-gray-600 dark:text-gray-400">Cost</span>
                   <div className="flex items-center gap-1">
                     <Coins className="w-4 h-4 text-yellow-500" />
-                    <span className="font-bold text-lg">{getRewardCost(selectedReward)}</span>
+                    <span className="font-bold text-lg text-gray-900 dark:text-white">{getRewardCost(selectedReward)}</span>
                   </div>
                 </div>
 
@@ -478,7 +478,7 @@ export default function RewardsPage() {
 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Available</span>
-                  <span className="font-medium">{selectedReward.remaining_quantity ?? 'Unlimited'} left</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{selectedReward.remaining_quantity ?? 'Unlimited'} left</span>
                 </div>
               </div>
 

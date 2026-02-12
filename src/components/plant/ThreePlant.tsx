@@ -976,10 +976,10 @@ function FloatingMessage({ contributor, position, onComplete }: { contributor: C
           <div className="w-6 h-6 rounded-full bg-[#4A6B5C] flex items-center justify-center text-white text-xs font-bold">
             {contributor.name.charAt(0)}
           </div>
-          <p className="font-bold text-[#2C2C2C] text-sm">{contributor.name}</p>
+          <p className="font-bold text-[#2C2C2C] dark:text-gray-100 text-sm">{contributor.name}</p>
         </div>
         {contributor.message && (
-          <p className="text-xs text-gray-600 leading-relaxed">"{contributor.message}"</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">"{contributor.message}"</p>
         )}
       </motion.div>
     </Html>

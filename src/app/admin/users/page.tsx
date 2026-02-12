@@ -44,13 +44,13 @@ import type { User, UserRole } from '@/types';
 
 // Role badge colors
 const roleBadgeColors: Record<string, string> = {
-  student: 'bg-blue-100 text-blue-700',
-  employee: 'bg-green-100 text-green-700',
-  guest: 'bg-gray-100 text-gray-700',
-  canteen_admin: 'bg-orange-100 text-orange-700',
-  finance_admin: 'bg-purple-100 text-purple-700',
-  sa_admin: 'bg-pink-100 text-pink-700',
-  super_admin: 'bg-red-100 text-red-700',
+  student: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  employee: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  guest: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+  canteen_admin: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  finance_admin: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  sa_admin: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
+  super_admin: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
 export default function AdminUsersPage() {
@@ -267,7 +267,7 @@ export default function AdminUsersPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             User Management
           </h1>
-          <p className="text-gray-500">
+          <p className="text-gray-500 dark:text-gray-400">
             Manage users, roles, and permissions
           </p>
         </div>
@@ -346,7 +346,7 @@ export default function AdminUsersPage() {
                     </Avatar>
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">{user.name || 'Unnamed'}</p>
+                        <p className="font-medium text-gray-900 dark:text-white">{user.name || 'Unnamed'}</p>
                         {user.is_banned && (
                           <Badge variant="destructive" className="text-xs">
                             Banned

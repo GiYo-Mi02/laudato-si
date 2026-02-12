@@ -218,7 +218,7 @@ export default function AdminAuditLogsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
             <ScrollText className="w-7 h-7 text-gray-500" />
             Audit Logs
           </h1>
@@ -251,7 +251,7 @@ export default function AdminAuditLogsPage() {
             setFilterAction(e.target.value);
             setPage(1);
           }}
-          className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+          className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
         >
           <option value="all">All Actions</option>
           {uniqueActions.map((action) => (
@@ -267,7 +267,7 @@ export default function AdminAuditLogsPage() {
             setFilterEntity(e.target.value);
             setPage(1);
           }}
-          className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+          className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
         >
           <option value="all">All Entities</option>
           {uniqueEntities.map((entity) => (
@@ -344,7 +344,7 @@ export default function AdminAuditLogsPage() {
                     animate={{ opacity: 1 }}
                     className="hover:bg-gray-50 dark:hover:bg-gray-900/30"
                   >
-                    <td className="px-4 py-3 text-sm whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm whitespace-nowrap text-gray-900 dark:text-gray-100">
                       {formatDate(log.created_at)}
                     </td>
                     <td className="px-4 py-3">
@@ -359,7 +359,7 @@ export default function AdminAuditLogsPage() {
                           <User className="w-6 h-6 text-gray-400" />
                         )}
                         <div>
-                          <p className="text-sm font-medium">{log.admin?.name || "Unknown"}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{log.admin?.name || "Unknown"}</p>
                           <p className="text-xs text-gray-500">{log.admin?.email || log.admin_email}</p>
                         </div>
                       </div>
@@ -429,7 +429,7 @@ export default function AdminAuditLogsPage() {
                       className={`w-8 h-8 rounded ${
                         pageNum === page
                           ? "bg-green-500 text-white"
-                          : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       }`}
                     >
                       {pageNum}

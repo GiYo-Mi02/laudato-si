@@ -279,7 +279,7 @@ export default function AdminRewardsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
             <Gift className="w-7 h-7 text-purple-500" />
             Rewards Management
           </h1>
@@ -309,7 +309,7 @@ export default function AdminRewardsPage() {
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value as RewardCategory | "all")}
-          className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+          className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
         >
           <option value="all">All Categories</option>
           {CATEGORIES.map((cat) => (
@@ -322,7 +322,7 @@ export default function AdminRewardsPage() {
         <select
           value={filterActive}
           onChange={(e) => setFilterActive(e.target.value as "all" | "active" | "inactive")}
-          className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+          className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
         >
           <option value="all">All Status</option>
           <option value="active">Active</option>
@@ -382,7 +382,7 @@ export default function AdminRewardsPage() {
               {/* Content */}
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-lg">{reward.name}</h3>
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{reward.name}</h3>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(reward.category)}`}>
                     {reward.category}
                   </span>
@@ -461,7 +461,7 @@ export default function AdminRewardsPage() {
               className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                   {editingReward ? "Edit Reward" : "Create Reward"}
                 </h2>
                 <button
@@ -476,7 +476,7 @@ export default function AdminRewardsPage() {
               <div className="space-y-4">
                 {/* Name */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Name *</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Name *</label>
                   <Input
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -486,23 +486,23 @@ export default function AdminRewardsPage() {
                 
                 {/* Description */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Description</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Reward description"
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
                     rows={3}
                   />
                 </div>
                 
                 {/* Category */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Category *</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Category *</label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as RewardCategory })}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                   >
                     {CATEGORIES.map((cat) => (
                       <option key={cat.value} value={cat.value}>
@@ -514,7 +514,7 @@ export default function AdminRewardsPage() {
                 
                 {/* Point Cost */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Point Cost *</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Point Cost *</label>
                   <Input
                     type="number"
                     min={1}
@@ -525,19 +525,19 @@ export default function AdminRewardsPage() {
                 
                 {/* Stock Quantity */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Stock Quantity</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Stock Quantity</label>
                   <Input
                     type="number"
                     min={0}
                     value={formData.stock_quantity}
                     onChange={(e) => setFormData({ ...formData, stock_quantity: parseInt(e.target.value) || 0 })}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Set to 0 for unlimited</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Set to 0 for unlimited</p>
                 </div>
                 
                 {/* Image URL */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Reward Image</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Reward Image</label>
                   <ImageUpload
                     value={formData.image_url}
                     onChange={(url) => setFormData({ ...formData, image_url: url })}
@@ -585,7 +585,7 @@ export default function AdminRewardsPage() {
                       }
                     }}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     💡 Tip: If images don't save, check document/STORAGE_SETUP_GUIDE.md
                   </p>
                 </div>
@@ -599,7 +599,7 @@ export default function AdminRewardsPage() {
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                     className="w-4 h-4 rounded border-gray-300"
                   />
-                  <label htmlFor="is_active" className="text-sm font-medium">
+                  <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-200">
                     Active (visible in marketplace)
                   </label>
                 </div>
