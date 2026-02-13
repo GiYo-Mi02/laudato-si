@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+
+// Use admin client for all DB operations (bypasses RLS)
+const supabase = supabaseAdmin;
 
 /**
  * Helper function to check if email is UMak domain
@@ -193,25 +196,28 @@ export async function POST(request: NextRequest) {
         .eq('user_id', userData.id)
         .single();
 
-      const yesterday = new Date(now);
-      yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setHours(0, 0, 0, 0);
+      // Use local date strings to avoid timezone issues with toISOString()
+      const toLocalDateStr = (d: Date) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      };
 
-      const todayStart = new Date(now);
-      todayStart.setHours(0, 0, 0, 0);
+      const todayStr = toLocalDateStr(now);
+      const yesterdayDate = new Date(now);
+      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+      const yesterdayStr = toLocalDateStr(yesterdayDate);
 
       if (streakData) {
-        const lastPledge = streakData.last_pledge_date 
-          ? new Date(streakData.last_pledge_date) 
-          : null;
+        const lastPledgeDateStr = streakData.last_pledge_date || '';
 
-        if (lastPledge) {
-          lastPledge.setHours(0, 0, 0, 0);
-          
-          // Check if yesterday - continue streak
-          if (lastPledge.getTime() === yesterday.getTime()) {
+        if (lastPledgeDateStr) {
+          // Compare date strings directly (no timezone conversion)
+          if (lastPledgeDateStr === yesterdayStr) {
+            // Pledged yesterday - continue streak
             currentStreak = Math.min(streakData.current_streak + 1, 5);
-          } else if (lastPledge.getTime() < yesterday.getTime()) {
+          } else if (lastPledgeDateStr < yesterdayStr) {
             // Streak broken - reset to day 1
             currentStreak = 1;
           } else {
@@ -226,7 +232,7 @@ export async function POST(request: NextRequest) {
           .update({
             current_streak: currentStreak,
             longest_streak: Math.max(streakData.longest_streak, currentStreak),
-            last_pledge_date: todayStart.toISOString().split('T')[0],
+            last_pledge_date: todayStr,
             updated_at: now.toISOString(),
           })
           .eq('user_id', userData.id);
@@ -238,7 +244,7 @@ export async function POST(request: NextRequest) {
             user_id: userData.id,
             current_streak: 1,
             longest_streak: 1,
-            last_pledge_date: todayStart.toISOString().split('T')[0],
+            last_pledge_date: todayStr,
             streak_started_at: now.toISOString(),
           });
       }
@@ -247,8 +253,8 @@ export async function POST(request: NextRequest) {
       pointsAwarded = Math.min(currentStreak, 5);
 
       // Record point transaction for audit trail
-      const referenceId = isPledge 
-        ? pledgeMessageRecord?.id 
+      const referenceId = isPledge
+        ? pledgeMessageRecord?.id
         : contribution?.id;
 
       await supabase
@@ -269,12 +275,18 @@ export async function POST(request: NextRequest) {
           .eq('id', pledgeMessageRecord.id);
       }
 
-      // Update user's total points
+      // Update user's total points AND sync streak to users table
+      const longestStreak = streakData
+        ? Math.max(streakData.longest_streak, currentStreak)
+        : currentStreak;
+
       await supabase
         .from('users')
-        .update({ 
+        .update({
           total_points: (userData.total_points || 0) + pointsAwarded,
-          last_contribution: now.toISOString() 
+          current_streak: currentStreak,
+          longest_streak: longestStreak,
+          last_contribution: now.toISOString()
         })
         .eq('id', userData.id);
     } else {

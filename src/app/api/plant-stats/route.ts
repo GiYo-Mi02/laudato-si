@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+
+// Use admin client for all DB operations (bypasses RLS)
+const supabase = supabaseAdmin;
 
 export async function GET(request: NextRequest) {
   try {
